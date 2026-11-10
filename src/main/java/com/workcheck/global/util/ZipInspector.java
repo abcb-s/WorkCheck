@@ -15,6 +15,9 @@ import org.apache.commons.compress.utils.SeekableInMemoryByteChannel;
  */
 public final class ZipInspector {
 
+    private static final String MACOS_METADATA_DIR = "__MACOSX/";
+    private static final String DS_STORE = ".DS_Store";
+
     private ZipInspector() {
     }
 
@@ -34,7 +37,7 @@ public final class ZipInspector {
 
     /**
      * 경로가 존재하는지 확인한다. 모든 엔트리가 하나의 최상위 폴더를 공유하면(GitHub ZIP)
-     * 그 폴더를 제거한 경로로도 확인한다. 디렉터리 경로(예: "src/")도 하위 엔트리가 있으면 존재로 본다.
+     * 그 폴더를 제거한 경로로도 확인한다. 이때 macOS 메타데이터 엔트리는 무시한다. 디렉터리 경로(예: "src/")도 하위 엔트리가 있으면 존재로 본다.
      */
     public static boolean containsPath(List<String> entries, String requiredPath) {
         String target = trimSlashes(normalize(requiredPath));
@@ -49,7 +52,7 @@ public final class ZipInspector {
             return false;
         }
         List<String> stripped = entries.stream()
-                .filter(name -> name.length() > root.length())
+                .filter(name -> name.startsWith(root) && name.length() > root.length())
                 .map(name -> name.substring(root.length()))
                 .toList();
         return matches(stripped, target);
@@ -69,6 +72,9 @@ public final class ZipInspector {
     private static String commonTopLevelFolder(List<String> entries) {
         String root = null;
         for (String entry : entries) {
+            if (isOsMetadata(entry)) {
+                continue;
+            }
             int slash = entry.indexOf('/');
             if (slash < 0) {
                 return null;
@@ -81,6 +87,13 @@ public final class ZipInspector {
             }
         }
         return root;
+    }
+
+    /** macOS Finder가 압축 시 끼워 넣는 메타데이터(__MACOSX/, .DS_Store)인지 확인한다. */
+    private static boolean isOsMetadata(String entry) {
+        return entry.startsWith(MACOS_METADATA_DIR)
+                || entry.equals(DS_STORE)
+                || entry.endsWith("/" + DS_STORE);
     }
 
     private static String normalize(String path) {
