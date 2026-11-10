@@ -1,0 +1,101 @@
+package com.workcheck.global.util;
+
+import com.workcheck.global.exception.exception.CustomException;
+import com.workcheck.global.exception.status_code.ErrorCode;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipFile;
+import org.apache.commons.compress.utils.SeekableInMemoryByteChannel;
+
+/**
+ * ZIP 내부 경로 목록을 읽고 필수 경로 포함 여부를 판정한다.
+ */
+public final class ZipInspector {
+
+    private ZipInspector() {
+    }
+
+    public static List<String> listEntries(byte[] content) {
+        try (ZipFile zipFile = ZipFile.builder()
+                .setSeekableByteChannel(new SeekableInMemoryByteChannel(content))
+                .get()) {
+            List<String> names = new ArrayList<>();
+            for (ZipArchiveEntry entry : Collections.list(zipFile.getEntries())) {
+                names.add(normalize(entry.getName()));
+            }
+            return names;
+        } catch (IOException | RuntimeException e) {
+            throw new CustomException(ErrorCode.INVALID_FILE, e);
+        }
+    }
+
+    /**
+     * 경로가 존재하는지 확인한다. 모든 엔트리가 하나의 최상위 폴더를 공유하면(GitHub ZIP)
+     * 그 폴더를 제거한 경로로도 확인한다. 디렉터리 경로(예: "src/")도 하위 엔트리가 있으면 존재로 본다.
+     */
+    public static boolean containsPath(List<String> entries, String requiredPath) {
+        String target = trimSlashes(normalize(requiredPath));
+        if (target.isEmpty()) {
+            return false;
+        }
+        if (matches(entries, target)) {
+            return true;
+        }
+        String root = commonTopLevelFolder(entries);
+        if (root == null) {
+            return false;
+        }
+        List<String> stripped = entries.stream()
+                .filter(name -> name.length() > root.length())
+                .map(name -> name.substring(root.length()))
+                .toList();
+        return matches(stripped, target);
+    }
+
+    private static boolean matches(List<String> entries, String target) {
+        for (String entry : entries) {
+            String name = trimSlashes(entry);
+            if (name.equals(target) || name.startsWith(target + "/")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 공통 최상위 폴더("folder/")를 반환하고, 없으면 null. */
+    private static String commonTopLevelFolder(List<String> entries) {
+        String root = null;
+        for (String entry : entries) {
+            int slash = entry.indexOf('/');
+            if (slash < 0) {
+                return null;
+            }
+            String top = entry.substring(0, slash + 1);
+            if (root == null) {
+                root = top;
+            } else if (!root.equals(top)) {
+                return null;
+            }
+        }
+        return root;
+    }
+
+    private static String normalize(String path) {
+        String p = path.replace('\\', '/');
+        while (p.startsWith("./")) {
+            p = p.substring(2);
+        }
+        return p;
+    }
+
+    private static String trimSlashes(String path) {
+        int start = 0;
+        int end = path.length();
+        while (start < end && path.charAt(start) == '/') start++;
+        while (end > start && path.charAt(end - 1) == '/') end--;
+        return path.substring(start, end);
+    }
+}
