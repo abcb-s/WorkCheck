@@ -9,6 +9,7 @@ import com.workcheck.domain.member.service.MemberService;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
 import java.util.Locale;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,6 +20,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
 public class MemberServiceImpl implements MemberService {
+
+    /**
+     * 없는 이메일로 로그인해도 BCrypt 비교를 한 번 수행해 응답 시간으로 가입 여부를 알 수 없게 한다.
+     * 기본 강도(10)로 만든 해시라 실제 회원 비교와 소요 시간이 같다.
+     */
+    private static final String DUMMY_PASSWORD_HASH = "$2a$10$Ubg2T/0apMovr2xiEBvMcePFJdmKd7NLo7CE.kU1JpXjaHuVLiZwS";
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
@@ -45,10 +52,13 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional(readOnly = true)
     public MemberResponse login(LoginRequest request) {
-        Member member = memberRepository.findByEmail(normalizeEmail(request.email()))
-                .filter(m -> passwordEncoder.matches(request.password(), m.getPassword()))
-                .orElseThrow(() -> new CustomException(ErrorCode.LOGIN_FAILED));
-        return MemberResponse.from(member);
+        Optional<Member> member = memberRepository.findByEmail(normalizeEmail(request.email()));
+        String hash = member.map(Member::getPassword).orElse(DUMMY_PASSWORD_HASH);
+        boolean matched = passwordEncoder.matches(request.password(), hash);
+        if (member.isEmpty() || !matched) {
+            throw new CustomException(ErrorCode.LOGIN_FAILED);
+        }
+        return MemberResponse.from(member.get());
     }
 
     @Override
