@@ -1,8 +1,10 @@
 package com.workcheck.domain.member.dto.request;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.nio.charset.StandardCharsets;
 
 public record SignupRequest(
         @NotBlank(message = "이메일을 입력해 주세요.")
@@ -18,4 +20,12 @@ public record SignupRequest(
         @Size(max = 30, message = "이름은 30자 이하로 입력해 주세요.")
         String name
 ) {
+
+    /** BCrypt는 72바이트를 넘는 비밀번호를 처리하지 못한다. */
+    private static final int BCRYPT_MAX_BYTES = 72;
+
+    @AssertTrue(message = "비밀번호가 너무 길어요. 한글은 24자, 영문은 64자 이하로 입력해 주세요.")
+    public boolean isPasswordWithinBcryptLimit() {
+        return password == null || password.getBytes(StandardCharsets.UTF_8).length <= BCRYPT_MAX_BYTES;
+    }
 }

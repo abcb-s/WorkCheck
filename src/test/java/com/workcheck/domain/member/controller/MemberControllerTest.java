@@ -77,6 +77,16 @@ class MemberControllerTest {
     }
 
     @Test
+    void signup_passwordOverBcryptLimit_returns400() throws Exception {
+        String password = "가".repeat(30); // 30자지만 UTF-8로 90바이트
+
+        mockMvc.perform(post("/api/members").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"a@b.com\",\"password\":\"" + password + "\",\"name\":\"학생\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    @Test
     void signup_duplicateEmail_returns409() throws Exception {
         given(memberService.signup(any())).willThrow(new CustomException(ErrorCode.DUPLICATE_EMAIL));
 

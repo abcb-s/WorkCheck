@@ -95,6 +95,8 @@ class MemberServiceImplTest {
 
         assertThatThrownBy(() -> memberService.login(new LoginRequest("x@b.com", "password1")))
                 .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
+        // 없는 이메일이어도 BCrypt 비교를 수행해 응답 시간을 맞춘다
+        verify(passwordEncoder).matches(org.mockito.ArgumentMatchers.eq("password1"), any());
     }
 
     @Test
