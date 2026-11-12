@@ -10,9 +10,7 @@ import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
 import com.workcheck.global.security.SessionAuthenticator;
 import java.util.Locale;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,8 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
 public class MemberServiceImpl implements MemberService {
-
-    private static final String DUMMY_PASSWORD_HASH = "$2a$10$Ubg2T/0apMovr2xiEBvMcePFJdmKd7NLo7CE.kU1JpXjaHuVLiZwS";
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
@@ -39,24 +35,17 @@ public class MemberServiceImpl implements MemberService {
                 .password(passwordEncoder.encode(request.password()))
                 .name(request.name().strip())
                 .build();
-        try {
-            return MemberResponse.from(memberRepository.saveAndFlush(member));
-        } catch (DataIntegrityViolationException e) {
-            throw new CustomException(ErrorCode.DUPLICATE_EMAIL, e);
-        }
+        return MemberResponse.from(memberRepository.save(member));
     }
 
     @Override
     @Transactional(readOnly = true)
     public MemberResponse login(LoginRequest request) {
-        Optional<Member> member = memberRepository.findByEmail(normalizeEmail(request.email()));
-        String hash = member.map(Member::getPassword).orElse(DUMMY_PASSWORD_HASH);
-        boolean matched = passwordEncoder.matches(request.password(), hash);
-        if (member.isEmpty() || !matched) {
-            throw new CustomException(ErrorCode.LOGIN_FAILED);
-        }
-        sessionAuthenticator.login(member.get().getId());
-        return MemberResponse.from(member.get());
+        Member member = memberRepository.findByEmail(normalizeEmail(request.email()))
+                .filter(found -> passwordEncoder.matches(request.password(), found.getPassword()))
+                .orElseThrow(() -> new CustomException(ErrorCode.LOGIN_FAILED));
+        sessionAuthenticator.login(member.getId());
+        return MemberResponse.from(member);
     }
 
     @Override
