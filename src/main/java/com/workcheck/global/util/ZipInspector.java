@@ -3,6 +3,10 @@ package com.workcheck.global.util;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -17,6 +21,7 @@ public final class ZipInspector {
 
     private static final String MACOS_METADATA_DIR = "__MACOSX/";
     private static final String DS_STORE = ".DS_Store";
+    private static final Charset CP949 = Charset.forName("MS949");
 
     /** ZIP 내부 엔트리 경로 목록을 읽는다. */
     public static List<String> listEntries(byte[] content) {
@@ -25,11 +30,21 @@ public final class ZipInspector {
                 .get()) {
             List<String> names = new ArrayList<>();
             for (ZipArchiveEntry entry : Collections.list(zipFile.getEntries())) {
-                names.add(normalize(entry.getName()));
+                names.add(normalize(decodeName(entry)));
             }
             return names;
         } catch (IOException e) {
             throw new CustomException(ErrorCode.INVALID_FILE, e);
+        }
+    }
+
+    /** 엔트리 이름을 UTF-8로 읽고, UTF-8이 아니면 CP949로 읽는다. */
+    private static String decodeName(ZipArchiveEntry entry) {
+        byte[] raw = entry.getRawName();
+        try {
+            return StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(raw)).toString();
+        } catch (CharacterCodingException e) {
+            return new String(raw, CP949);
         }
     }
 
