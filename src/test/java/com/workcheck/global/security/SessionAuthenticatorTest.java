@@ -11,6 +11,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 class SessionAuthenticatorTest {
 
@@ -20,13 +22,19 @@ class SessionAuthenticatorTest {
     @AfterEach
     void clearContext() {
         SecurityContextHolder.clearContext();
+        RequestContextHolder.resetRequestAttributes();
+    }
+
+    private static void bind(MockHttpServletRequest request) {
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request, new MockHttpServletResponse()));
     }
 
     @Test
     void login_savesMemberIdAsPrincipalInSession() {
         MockHttpServletRequest request = new MockHttpServletRequest();
+        bind(request);
 
-        sessionAuthenticator.login(1L, request, new MockHttpServletResponse());
+        sessionAuthenticator.login(1L);
 
         Authentication saved = repository.loadDeferredContext(request).get().getAuthentication();
         assertThat(saved.isAuthenticated()).isTrue();
@@ -41,8 +49,9 @@ class SessionAuthenticatorTest {
         MockHttpSession session = new MockHttpSession();
         String beforeId = session.getId();
         request.setSession(session);
+        bind(request);
 
-        sessionAuthenticator.login(1L, request, new MockHttpServletResponse());
+        sessionAuthenticator.login(1L);
 
         assertThat(request.getSession(false).getId()).isNotEqualTo(beforeId);
     }

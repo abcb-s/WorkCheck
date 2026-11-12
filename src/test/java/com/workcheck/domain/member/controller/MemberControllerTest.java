@@ -1,7 +1,6 @@
 package com.workcheck.domain.member.controller;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -113,7 +112,7 @@ class MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(1));
 
-        then(sessionAuthenticator).should().login(eq(1L), any(), any());
+        then(sessionAuthenticator).should().login(1L);
     }
 
     @Test
@@ -126,7 +125,7 @@ class MemberControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("LOGIN_FAILED"));
 
-        then(sessionAuthenticator).should(never()).login(any(), any(), any());
+        then(sessionAuthenticator).should(never()).login(any());
     }
 
     @Test

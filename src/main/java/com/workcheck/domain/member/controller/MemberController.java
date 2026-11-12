@@ -50,7 +50,7 @@ public class MemberController {
                                                               HttpServletRequest httpRequest,
                                                               HttpServletResponse httpResponse) {
         MemberResponse member = memberService.login(request);
-        sessionAuthenticator.login(member.id(), httpRequest, httpResponse);
+        sessionAuthenticator.login(member.id());
         return ResponseEntity.ok(BaseResponse.success(member));
     }
 

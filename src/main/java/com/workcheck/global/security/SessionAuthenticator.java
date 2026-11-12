@@ -12,6 +12,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Component
 @RequiredArgsConstructor
@@ -22,7 +24,11 @@ public class SessionAuthenticator {
     private final SecurityContextRepository securityContextRepository;
     private final SecurityContextHolderStrategy contextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
 
-    public void login(Long memberId, HttpServletRequest request, HttpServletResponse response) {
+    public void login(Long memberId) {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+        HttpServletRequest request = attributes.getRequest();
+        HttpServletResponse response = attributes.getResponse();
+
         preventSessionFixation(request);
 
         SecurityContext context = contextHolderStrategy.createEmptyContext();
