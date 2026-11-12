@@ -5,18 +5,16 @@ import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
 import java.util.Locale;
 
-/**
- * 확장자와 매직 바이트를 모두 확인해 파일 형식을 판별한다.
- */
 public final class FileTypeDetector {
 
-    private static final byte[] ZIP_MAGIC = {0x50, 0x4B, 0x03, 0x04};      // PK\3\4
-    private static final byte[] ZIP_EMPTY_MAGIC = {0x50, 0x4B, 0x05, 0x06}; // 빈 ZIP
-    private static final byte[] PDF_MAGIC = {0x25, 0x50, 0x44, 0x46, 0x2D}; // %PDF-
+    private static final byte[] ZIP_MAGIC = {0x50, 0x4B, 0x03, 0x04};
+    private static final byte[] ZIP_EMPTY_MAGIC = {0x50, 0x4B, 0x05, 0x06};
+    private static final byte[] PDF_MAGIC = {0x25, 0x50, 0x44, 0x46, 0x2D};
 
     private FileTypeDetector() {
     }
 
+    /** 확장자와 매직 바이트로 파일 형식을 판별한다. */
     public static FileType detect(String fileName, byte[] content) {
         if (content == null || content.length == 0) {
             throw new CustomException(ErrorCode.EMPTY_FILE);
