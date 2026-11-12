@@ -102,7 +102,7 @@ class MemberControllerTest {
     void login_returns200() throws Exception {
         given(memberService.signin(any())).willReturn(MEMBER);
 
-        mockMvc.perform(post("/api/members/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/members/signin").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"a@b.com","password":"password1"}"""))
                 .andExpect(status().isOk())
@@ -113,7 +113,7 @@ class MemberControllerTest {
     void login_wrongCredentials_returns401() throws Exception {
         given(memberService.signin(any())).willThrow(new CustomException(ErrorCode.LOGIN_FAILED));
 
-        mockMvc.perform(post("/api/members/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/members/signin").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"a@b.com","password":"wrong-pass"}"""))
                 .andExpect(status().isUnauthorized())
@@ -144,7 +144,7 @@ class MemberControllerTest {
 
     @Test
     void cors_preflight_allowedOrigin() throws Exception {
-        mockMvc.perform(options("/api/members/login")
+        mockMvc.perform(options("/api/members/signin")
                         .header("Origin", "http://localhost:5173")
                         .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isOk())
@@ -154,7 +154,7 @@ class MemberControllerTest {
 
     @Test
     void cors_preflight_unknownOrigin_rejected() throws Exception {
-        mockMvc.perform(options("/api/members/login")
+        mockMvc.perform(options("/api/members/signin")
                         .header("Origin", "http://evil.example")
                         .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isForbidden());

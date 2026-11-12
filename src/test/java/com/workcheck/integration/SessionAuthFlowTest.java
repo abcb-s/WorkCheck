@@ -41,7 +41,7 @@ class SessionAuthFlowTest {
                 .andExpect(status().isCreated());
 
         String beforeId = session.getId();
-        MvcResult login = mockMvc.perform(post("/api/members/login").session(session)
+        MvcResult login = mockMvc.perform(post("/api/members/signin").session(session)
                         .cookie(xsrf).header("X-XSRF-TOKEN", xsrf.getValue())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -78,7 +78,7 @@ class SessionAuthFlowTest {
         MvcResult csrf = mockMvc.perform(get("/api/members/csrf")).andReturn();
         Cookie xsrf = csrf.getResponse().getCookie("XSRF-TOKEN");
 
-        mockMvc.perform(post("/api/members/login")
+        mockMvc.perform(post("/api/members/signin")
                         .cookie(xsrf).header("X-XSRF-TOKEN", xsrf.getValue())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

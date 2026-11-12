@@ -53,7 +53,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_PATHS).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/members/csrf").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/members", "/api/members/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/members", "/api/members/signin").permitAll()
                         .anyRequest().authenticated())
                 .logout(logout -> logout
                         .logoutUrl("/api/members/logout")

@@ -41,8 +41,8 @@ public class MemberController {
     }
 
     @Operation(summary = "로그인", description = "성공하면 세션 쿠키(JSESSIONID)가 발급돼요.")
-    @PostMapping("/login")
-    public ResponseEntity<BaseResponse<MemberResponse>> login(@Valid @RequestBody SigninRequest request) {
+    @PostMapping("/signin")
+    public ResponseEntity<BaseResponse<MemberResponse>> signin(@Valid @RequestBody SigninRequest request) {
         return ResponseEntity.ok(BaseResponse.success(memberService.signin(request)));
     }
 
