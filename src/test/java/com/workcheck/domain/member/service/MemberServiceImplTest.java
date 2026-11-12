@@ -3,6 +3,7 @@ package com.workcheck.domain.member.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -50,7 +51,7 @@ class MemberServiceImplTest {
 
         assertThat(response.email()).isEqualTo("a@b.com");
         assertThat(response.name()).isEqualTo("학생");
-        verify(memberRepository).save(org.mockito.ArgumentMatchers.argThat(
+        verify(memberRepository).save(argThat(
                 m -> !m.getPassword().equals("password1") && passwordEncoder.matches("password1", m.getPassword())));
     }
 
