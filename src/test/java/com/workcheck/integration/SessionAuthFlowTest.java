@@ -62,10 +62,12 @@ class SessionAuthFlowTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("INVALID_CSRF"));
 
-        mockMvc.perform(post("/api/members/logout").session(loggedIn)
+        MvcResult logout = mockMvc.perform(post("/api/members/logout").session(loggedIn)
                         .cookie(xsrf).header("X-XSRF-TOKEN", xsrf.getValue()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isNoContent())
+                .andReturn();
         assertThat(loggedIn.isInvalid()).isTrue();
+        assertThat(logout.getResponse().getCookie("JSESSIONID").getMaxAge()).isZero();
 
         mockMvc.perform(get("/api/members/me"))
                 .andExpect(status().isUnauthorized());
