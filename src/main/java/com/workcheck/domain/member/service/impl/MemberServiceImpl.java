@@ -1,6 +1,6 @@
 package com.workcheck.domain.member.service.impl;
 
-import com.workcheck.domain.member.dto.request.LoginRequest;
+import com.workcheck.domain.member.dto.request.SigninRequest;
 import com.workcheck.domain.member.dto.request.SignupRequest;
 import com.workcheck.domain.member.dto.response.MemberResponse;
 import com.workcheck.domain.member.entity.Member;
@@ -40,7 +40,7 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     @Transactional(readOnly = true)
-    public MemberResponse login(LoginRequest request) {
+    public MemberResponse signin(SigninRequest request) {
         Member member = memberRepository.findByEmail(normalizeEmail(request.email()))
                 .filter(found -> passwordEncoder.matches(request.password(), found.getPassword()))
                 .orElseThrow(() -> new CustomException(ErrorCode.LOGIN_FAILED));

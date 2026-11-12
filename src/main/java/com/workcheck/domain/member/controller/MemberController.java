@@ -1,6 +1,6 @@
 package com.workcheck.domain.member.controller;
 
-import com.workcheck.domain.member.dto.request.LoginRequest;
+import com.workcheck.domain.member.dto.request.SigninRequest;
 import com.workcheck.domain.member.dto.request.SignupRequest;
 import com.workcheck.domain.member.dto.response.MemberResponse;
 import com.workcheck.domain.member.service.MemberService;
@@ -42,8 +42,8 @@ public class MemberController {
 
     @Operation(summary = "로그인", description = "성공하면 세션 쿠키(JSESSIONID)가 발급돼요.")
     @PostMapping("/login")
-    public ResponseEntity<BaseResponse<MemberResponse>> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(BaseResponse.success(memberService.login(request)));
+    public ResponseEntity<BaseResponse<MemberResponse>> login(@Valid @RequestBody SigninRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(memberService.signin(request)));
     }
 
     @Operation(summary = "내 정보 조회")

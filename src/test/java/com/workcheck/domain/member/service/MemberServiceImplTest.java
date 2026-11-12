@@ -8,7 +8,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.workcheck.domain.member.dto.request.LoginRequest;
+import com.workcheck.domain.member.dto.request.SigninRequest;
 import com.workcheck.domain.member.dto.request.SignupRequest;
 import com.workcheck.domain.member.dto.response.MemberResponse;
 import com.workcheck.domain.member.entity.Member;
@@ -71,7 +71,7 @@ class MemberServiceImplTest {
                 .password(passwordEncoder.encode("password1")).name("학생").build();
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
 
-        assertThat(memberService.login(new LoginRequest("A@b.com", "password1")).id()).isEqualTo(1L);
+        assertThat(memberService.signin(new SigninRequest("A@b.com", "password1")).id()).isEqualTo(1L);
         verify(sessionAuthenticator).signin(1L);
     }
 
@@ -81,7 +81,7 @@ class MemberServiceImplTest {
                 .password(passwordEncoder.encode("password1")).name("학생").build();
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
 
-        assertThatThrownBy(() -> memberService.login(new LoginRequest("a@b.com", "wrong")))
+        assertThatThrownBy(() -> memberService.signin(new SigninRequest("a@b.com", "wrong")))
                 .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
         verify(sessionAuthenticator, never()).signin(any());
     }
@@ -90,7 +90,7 @@ class MemberServiceImplTest {
     void login_unknownEmail_throwsSameError() {
         given(memberRepository.findByEmail("x@b.com")).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> memberService.login(new LoginRequest("x@b.com", "password1")))
+        assertThatThrownBy(() -> memberService.signin(new SigninRequest("x@b.com", "password1")))
                 .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
         verify(sessionAuthenticator, never()).signin(any());
     }

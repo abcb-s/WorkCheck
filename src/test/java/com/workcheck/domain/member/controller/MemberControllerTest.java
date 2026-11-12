@@ -100,7 +100,7 @@ class MemberControllerTest {
 
     @Test
     void login_returns200() throws Exception {
-        given(memberService.login(any())).willReturn(MEMBER);
+        given(memberService.signin(any())).willReturn(MEMBER);
 
         mockMvc.perform(post("/api/members/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -111,7 +111,7 @@ class MemberControllerTest {
 
     @Test
     void login_wrongCredentials_returns401() throws Exception {
-        given(memberService.login(any())).willThrow(new CustomException(ErrorCode.LOGIN_FAILED));
+        given(memberService.signin(any())).willThrow(new CustomException(ErrorCode.LOGIN_FAILED));
 
         mockMvc.perform(post("/api/members/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("""
