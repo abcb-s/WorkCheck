@@ -6,17 +6,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.commons.compress.utils.SeekableInMemoryByteChannel;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ZipInspector {
 
     private static final String MACOS_METADATA_DIR = "__MACOSX/";
     private static final String DS_STORE = ".DS_Store";
-
-    private ZipInspector() {
-    }
 
     /** ZIP 내부 엔트리 경로 목록을 읽는다. */
     public static List<String> listEntries(byte[] content) {
