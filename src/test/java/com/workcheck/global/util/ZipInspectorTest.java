@@ -7,6 +7,8 @@ import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -15,8 +17,12 @@ import org.junit.jupiter.api.Test;
 class ZipInspectorTest {
 
     private static byte[] zip(String... names) throws IOException {
+        return zip(StandardCharsets.UTF_8, names);
+    }
+
+    private static byte[] zip(Charset charset, String... names) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try (ZipOutputStream zos = new ZipOutputStream(out)) {
+        try (ZipOutputStream zos = new ZipOutputStream(out, charset)) {
             for (String name : names) {
                 zos.putNextEntry(new ZipEntry(name));
                 zos.closeEntry();
@@ -56,6 +62,21 @@ class ZipInspectorTest {
         List<String> entries = ZipInspector.listEntries(zip("a/data.sql", "b/other.sql"));
 
         assertThat(ZipInspector.containsPath(entries, "data.sql")).isFalse();
+    }
+
+    @Test
+    void listEntries_cp949Names_decodesKorean() throws IOException {
+        List<String> entries = ZipInspector.listEntries(zip(Charset.forName("MS949"), "과제/보고서.pdf"));
+
+        assertThat(entries).containsExactly("과제/보고서.pdf");
+        assertThat(ZipInspector.containsPath(entries, "보고서.pdf")).isTrue();
+    }
+
+    @Test
+    void listEntries_utf8Names_keepsKorean() throws IOException {
+        List<String> entries = ZipInspector.listEntries(zip("과제/보고서.pdf"));
+
+        assertThat(entries).containsExactly("과제/보고서.pdf");
     }
 
     @Test

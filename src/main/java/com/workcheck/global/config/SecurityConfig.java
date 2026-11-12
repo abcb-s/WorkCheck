@@ -13,10 +13,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -29,21 +27,11 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 세션 기반 인증 설정.
- * <ul>
- *   <li>로그인: MemberController가 비밀번호를 검증한 뒤 SecurityContext를 세션에 저장한다.
- *       principal은 회원 ID(Long)이며 컨트롤러에서 {@code @AuthenticationPrincipal Long memberId}로 받는다.</li>
- *   <li>CSRF: SPA 모드. 서버가 XSRF-TOKEN 쿠키를 내려주고, 프론트는 같은 값을 X-XSRF-TOKEN 헤더로 보낸다.</li>
- *   <li>인가: 아래 공개 경로를 뺀 모든 요청은 로그인이 필요하다. 새 API는 자동으로 보호된다.</li>
- * </ul>
- */
 @Configuration
-@EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private static final String[] PUBLIC_DOCS = {"/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**"};
+    private static final String[] PUBLIC_PATHS = {"/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**"};
 
     private final JsonMapper jsonMapper;
 
@@ -58,18 +46,18 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .spa()
                         .ignoringRequestMatchers("/h2-console/**"))
-                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)) // H2 콘솔
+                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_DOCS).permitAll()
+                        .requestMatchers(PUBLIC_PATHS).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/members/csrf").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/members", "/api/members/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/members", "/api/members/signin").permitAll()
                         .anyRequest().authenticated())
                 .logout(logout -> logout
                         .logoutUrl("/api/members/logout")
+                        .deleteCookies("JSESSIONID")
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)))
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, e) ->
@@ -92,9 +80,9 @@ public class SecurityConfig {
     private CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(allowedOrigins);
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true); // 세션 쿠키 전송
+        config.setAllowCredentials(true);
         config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);

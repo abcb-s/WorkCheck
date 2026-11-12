@@ -16,7 +16,7 @@ public enum ErrorCode {
 
     // 401
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요해요."),
-    LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "LOGIN_FAILED", "이메일 또는 비밀번호가 올바르지 않아요."),
+    SIGNIN_FAILED(HttpStatus.UNAUTHORIZED, "SIGNIN_FAILED", "이메일 또는 비밀번호가 올바르지 않아요."),
 
     // 403
     FORBIDDEN(HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없어요."),
