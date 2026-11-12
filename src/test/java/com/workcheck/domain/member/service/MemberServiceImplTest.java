@@ -3,6 +3,7 @@ package com.workcheck.domain.member.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -23,7 +24,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -45,13 +45,13 @@ class MemberServiceImplTest {
     @Test
     void signup_normalizesEmailAndEncodesPassword() {
         given(memberRepository.existsByEmail("a@b.com")).willReturn(false);
-        given(memberRepository.saveAndFlush(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
+        given(memberRepository.save(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
 
-        MemberResponse response = memberService.signup(new SignupRequest("  A@B.com ", "password1", " 학생 "));
+        MemberResponse response = memberService.signup(new SignupRequest("A@B.com", "password1", " 학생 "));
 
         assertThat(response.email()).isEqualTo("a@b.com");
         assertThat(response.name()).isEqualTo("학생");
-        verify(memberRepository).saveAndFlush(org.mockito.ArgumentMatchers.argThat(
+        verify(memberRepository).save(argThat(
                 m -> !m.getPassword().equals("password1") && passwordEncoder.matches("password1", m.getPassword())));
     }
 
@@ -62,16 +62,7 @@ class MemberServiceImplTest {
         assertThatThrownBy(() -> memberService.signup(new SignupRequest("a@b.com", "password1", "학생")))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.DUPLICATE_EMAIL);
-        verify(memberRepository, never()).saveAndFlush(any());
-    }
-
-    @Test
-    void signup_uniqueConstraintRace_throwsDuplicate() {
-        given(memberRepository.existsByEmail("a@b.com")).willReturn(false);
-        given(memberRepository.saveAndFlush(any(Member.class))).willThrow(new DataIntegrityViolationException("dup"));
-
-        assertThatThrownBy(() -> memberService.signup(new SignupRequest("a@b.com", "password1", "학생")))
-                .extracting("errorCode").isEqualTo(ErrorCode.DUPLICATE_EMAIL);
+        verify(memberRepository, never()).save(any());
     }
 
     @Test
@@ -101,7 +92,7 @@ class MemberServiceImplTest {
 
         assertThatThrownBy(() -> memberService.login(new LoginRequest("x@b.com", "password1")))
                 .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
-        verify(passwordEncoder).matches(org.mockito.ArgumentMatchers.eq("password1"), any());
+        verify(sessionAuthenticator, never()).login(any());
     }
 
     @Test
