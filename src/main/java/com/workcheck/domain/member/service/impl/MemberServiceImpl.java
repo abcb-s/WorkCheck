@@ -8,6 +8,7 @@ import com.workcheck.domain.member.repository.MemberRepository;
 import com.workcheck.domain.member.service.MemberService;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
+import com.workcheck.global.security.SessionAuthenticator;
 import java.util.Locale;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SessionAuthenticator sessionAuthenticator;
 
     @Override
     public MemberResponse signup(SignupRequest request) {
@@ -58,6 +60,7 @@ public class MemberServiceImpl implements MemberService {
         if (member.isEmpty() || !matched) {
             throw new CustomException(ErrorCode.LOGIN_FAILED);
         }
+        sessionAuthenticator.login(member.get().getId());
         return MemberResponse.from(member.get());
     }
 

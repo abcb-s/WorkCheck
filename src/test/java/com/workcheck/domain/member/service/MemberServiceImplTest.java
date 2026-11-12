@@ -15,6 +15,7 @@ import com.workcheck.domain.member.repository.MemberRepository;
 import com.workcheck.domain.member.service.impl.MemberServiceImpl;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
+import com.workcheck.global.security.SessionAuthenticator;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,9 @@ class MemberServiceImplTest {
 
     @Spy
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(4);
+
+    @Mock
+    private SessionAuthenticator sessionAuthenticator;
 
     @InjectMocks
     private MemberServiceImpl memberService;
@@ -77,6 +81,7 @@ class MemberServiceImplTest {
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
 
         assertThat(memberService.login(new LoginRequest("A@b.com", "password1")).id()).isEqualTo(1L);
+        verify(sessionAuthenticator).login(1L);
     }
 
     @Test
@@ -87,6 +92,7 @@ class MemberServiceImplTest {
 
         assertThatThrownBy(() -> memberService.login(new LoginRequest("a@b.com", "wrong")))
                 .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
+        verify(sessionAuthenticator, never()).login(any());
     }
 
     @Test
