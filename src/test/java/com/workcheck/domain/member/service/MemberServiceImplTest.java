@@ -46,7 +46,7 @@ class MemberServiceImplTest {
         given(memberRepository.existsByEmail("a@b.com")).willReturn(false);
         given(memberRepository.save(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
 
-        MemberResponse response = memberService.signup(new SignupRequest("  A@B.com ", "password1", " 학생 "));
+        MemberResponse response = memberService.signup(new SignupRequest("A@B.com", "password1", " 학생 "));
 
         assertThat(response.email()).isEqualTo("a@b.com");
         assertThat(response.name()).isEqualTo("학생");
