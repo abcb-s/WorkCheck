@@ -1,7 +1,10 @@
 package com.workcheck.domain.member.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -16,6 +19,7 @@ import com.workcheck.domain.member.service.MemberService;
 import com.workcheck.global.config.SecurityConfig;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
+import com.workcheck.global.security.SessionAuthenticator;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -42,6 +46,9 @@ class MemberControllerTest {
 
     @MockitoBean
     private MemberService memberService;
+
+    @MockitoBean
+    private SessionAuthenticator sessionAuthenticator;
 
     private static UsernamePasswordAuthenticationToken loggedIn(long memberId) {
         return UsernamePasswordAuthenticationToken.authenticated(
@@ -97,6 +104,19 @@ class MemberControllerTest {
     }
 
     @Test
+    void login_returns200AndStoresSession() throws Exception {
+        given(memberService.login(any())).willReturn(MEMBER);
+
+        mockMvc.perform(post("/api/members/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"a@b.com","password":"password1"}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(1));
+
+        then(sessionAuthenticator).should().login(eq(1L), any(), any());
+    }
+
+    @Test
     void login_wrongCredentials_returns401() throws Exception {
         given(memberService.login(any())).willThrow(new CustomException(ErrorCode.LOGIN_FAILED));
 
@@ -105,6 +125,8 @@ class MemberControllerTest {
                                 {"email":"a@b.com","password":"wrong-pass"}"""))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("LOGIN_FAILED"));
+
+        then(sessionAuthenticator).should(never()).login(any(), any(), any());
     }
 
     @Test

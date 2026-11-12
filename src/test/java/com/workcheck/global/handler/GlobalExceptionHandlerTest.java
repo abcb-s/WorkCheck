@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.workcheck.domain.member.controller.MemberController;
 import com.workcheck.domain.member.service.MemberService;
 import com.workcheck.global.config.SecurityConfig;
+import com.workcheck.global.security.SessionAuthenticator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -28,6 +29,9 @@ class GlobalExceptionHandlerTest {
 
     @MockitoBean
     private MemberService memberService;
+
+    @MockitoBean
+    private SessionAuthenticator sessionAuthenticator;
 
     @Test
     void unknownPath_returns404() throws Exception {
