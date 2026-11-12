@@ -8,7 +8,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.workcheck.domain.member.dto.request.LoginRequest;
+import com.workcheck.domain.member.dto.request.SigninRequest;
 import com.workcheck.domain.member.dto.request.SignupRequest;
 import com.workcheck.domain.member.dto.response.MemberResponse;
 import com.workcheck.domain.member.entity.Member;
@@ -66,33 +66,33 @@ class MemberServiceImplTest {
     }
 
     @Test
-    void login_success() {
+    void signin_success() {
         Member member = Member.builder().id(1L).email("a@b.com")
                 .password(passwordEncoder.encode("password1")).name("학생").build();
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
 
-        assertThat(memberService.login(new LoginRequest("A@b.com", "password1")).id()).isEqualTo(1L);
-        verify(sessionAuthenticator).login(1L);
+        assertThat(memberService.signin(new SigninRequest("A@b.com", "password1")).id()).isEqualTo(1L);
+        verify(sessionAuthenticator).signin(1L);
     }
 
     @Test
-    void login_wrongPassword_throws() {
+    void signin_wrongPassword_throws() {
         Member member = Member.builder().id(1L).email("a@b.com")
                 .password(passwordEncoder.encode("password1")).name("학생").build();
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
 
-        assertThatThrownBy(() -> memberService.login(new LoginRequest("a@b.com", "wrong")))
-                .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
-        verify(sessionAuthenticator, never()).login(any());
+        assertThatThrownBy(() -> memberService.signin(new SigninRequest("a@b.com", "wrong")))
+                .extracting("errorCode").isEqualTo(ErrorCode.SIGNIN_FAILED);
+        verify(sessionAuthenticator, never()).signin(any());
     }
 
     @Test
-    void login_unknownEmail_throwsSameError() {
+    void signin_unknownEmail_throwsSameError() {
         given(memberRepository.findByEmail("x@b.com")).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> memberService.login(new LoginRequest("x@b.com", "password1")))
-                .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
-        verify(sessionAuthenticator, never()).login(any());
+        assertThatThrownBy(() -> memberService.signin(new SigninRequest("x@b.com", "password1")))
+                .extracting("errorCode").isEqualTo(ErrorCode.SIGNIN_FAILED);
+        verify(sessionAuthenticator, never()).signin(any());
     }
 
     @Test

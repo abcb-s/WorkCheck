@@ -41,32 +41,32 @@ class SessionAuthFlowTest {
                 .andExpect(status().isCreated());
 
         String beforeId = session.getId();
-        MvcResult login = mockMvc.perform(post("/api/members/login").session(session)
+        MvcResult signin = mockMvc.perform(post("/api/members/signin").session(session)
                         .cookie(xsrf).header("X-XSRF-TOKEN", xsrf.getValue())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"flow@b.com","password":"password1"}"""))
                 .andExpect(status().isOk())
                 .andReturn();
-        MockHttpSession loggedIn = (MockHttpSession) login.getRequest().getSession(false);
-        assertThat(loggedIn).isNotNull();
-        assertThat(loggedIn.getId()).isNotEqualTo(beforeId);
+        MockHttpSession signedIn = (MockHttpSession) signin.getRequest().getSession(false);
+        assertThat(signedIn).isNotNull();
+        assertThat(signedIn.getId()).isNotEqualTo(beforeId);
 
-        assertThat(login.getResponse().getCookie("XSRF-TOKEN")).isNull();
+        assertThat(signin.getResponse().getCookie("XSRF-TOKEN")).isNull();
 
-        mockMvc.perform(get("/api/members/me").session(loggedIn))
+        mockMvc.perform(get("/api/members/me").session(signedIn))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value("flow@b.com"));
 
-        mockMvc.perform(post("/api/members/logout").session(loggedIn))
+        mockMvc.perform(post("/api/members/logout").session(signedIn))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("INVALID_CSRF"));
 
-        MvcResult logout = mockMvc.perform(post("/api/members/logout").session(loggedIn)
+        MvcResult logout = mockMvc.perform(post("/api/members/logout").session(signedIn)
                         .cookie(xsrf).header("X-XSRF-TOKEN", xsrf.getValue()))
                 .andExpect(status().isNoContent())
                 .andReturn();
-        assertThat(loggedIn.isInvalid()).isTrue();
+        assertThat(signedIn.isInvalid()).isTrue();
         assertThat(logout.getResponse().getCookie("JSESSIONID").getMaxAge()).isZero();
 
         mockMvc.perform(get("/api/members/me"))
@@ -74,11 +74,11 @@ class SessionAuthFlowTest {
     }
 
     @Test
-    void demoMemberCanLogin() throws Exception {
+    void demoMemberCanSignin() throws Exception {
         MvcResult csrf = mockMvc.perform(get("/api/members/csrf")).andReturn();
         Cookie xsrf = csrf.getResponse().getCookie("XSRF-TOKEN");
 
-        mockMvc.perform(post("/api/members/login")
+        mockMvc.perform(post("/api/members/signin")
                         .cookie(xsrf).header("X-XSRF-TOKEN", xsrf.getValue())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

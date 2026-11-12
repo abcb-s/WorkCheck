@@ -1,6 +1,6 @@
 package com.workcheck.domain.member.service.impl;
 
-import com.workcheck.domain.member.dto.request.LoginRequest;
+import com.workcheck.domain.member.dto.request.SigninRequest;
 import com.workcheck.domain.member.dto.request.SignupRequest;
 import com.workcheck.domain.member.dto.response.MemberResponse;
 import com.workcheck.domain.member.entity.Member;
@@ -26,37 +26,46 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public MemberResponse signup(SignupRequest request) {
+
         String email = normalizeEmail(request.email());
+
         if (memberRepository.existsByEmail(email)) {
             throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }
+
         Member member = Member.builder()
                 .email(email)
                 .password(passwordEncoder.encode(request.password()))
                 .name(request.name().strip())
                 .build();
+
         return MemberResponse.from(memberRepository.save(member));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public MemberResponse login(LoginRequest request) {
+    public MemberResponse signin(SigninRequest request) {
+
         Member member = memberRepository.findByEmail(normalizeEmail(request.email()))
                 .filter(found -> passwordEncoder.matches(request.password(), found.getPassword()))
-                .orElseThrow(() -> new CustomException(ErrorCode.LOGIN_FAILED));
-        sessionAuthenticator.login(member.getId());
+                .orElseThrow(() -> new CustomException(ErrorCode.SIGNIN_FAILED));
+
+        sessionAuthenticator.signin(member.getId());
+
         return MemberResponse.from(member);
     }
 
     @Override
     @Transactional(readOnly = true)
     public MemberResponse getMember(Long memberId) {
+
         return memberRepository.findById(memberId)
                 .map(MemberResponse::from)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
     }
 
     private String normalizeEmail(String email) {
+
         return email.strip().toLowerCase(Locale.ROOT);
     }
 }

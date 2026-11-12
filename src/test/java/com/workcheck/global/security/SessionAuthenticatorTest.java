@@ -30,11 +30,11 @@ class SessionAuthenticatorTest {
     }
 
     @Test
-    void login_savesMemberIdAsPrincipalInSession() {
+    void signin_savesMemberIdAsPrincipalInSession() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         bind(request);
 
-        sessionAuthenticator.login(1L);
+        sessionAuthenticator.signin(1L);
 
         Authentication saved = repository.loadDeferredContext(request).get().getAuthentication();
         assertThat(saved.isAuthenticated()).isTrue();
@@ -44,14 +44,14 @@ class SessionAuthenticatorTest {
     }
 
     @Test
-    void login_withExistingSession_changesSessionId() {
+    void signin_withExistingSession_changesSessionId() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpSession session = new MockHttpSession();
         String beforeId = session.getId();
         request.setSession(session);
         bind(request);
 
-        sessionAuthenticator.login(1L);
+        sessionAuthenticator.signin(1L);
 
         assertThat(request.getSession(false).getId()).isNotEqualTo(beforeId);
     }
