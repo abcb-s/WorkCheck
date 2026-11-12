@@ -28,7 +28,7 @@ public final class ZipInspector {
                 names.add(normalize(entry.getName()));
             }
             return names;
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException e) {
             throw new CustomException(ErrorCode.INVALID_FILE, e);
         }
     }
