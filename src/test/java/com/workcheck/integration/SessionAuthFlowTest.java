@@ -52,12 +52,7 @@ class SessionAuthFlowTest {
         assertThat(loggedIn).isNotNull();
         assertThat(loggedIn.getId()).isNotEqualTo(beforeId);
 
-        Cookie rotated = login.getResponse().getCookie("XSRF-TOKEN");
-        Cookie currentXsrf = rotated != null && !rotated.getValue().isEmpty() ? rotated : xsrf;
-        if (rotated != null && rotated.getValue().isEmpty()) {
-            currentXsrf = mockMvc.perform(get("/api/members/csrf").session(loggedIn))
-                    .andReturn().getResponse().getCookie("XSRF-TOKEN");
-        }
+        assertThat(login.getResponse().getCookie("XSRF-TOKEN")).isNull();
 
         mockMvc.perform(get("/api/members/me").session(loggedIn))
                 .andExpect(status().isOk())
@@ -68,7 +63,7 @@ class SessionAuthFlowTest {
                 .andExpect(jsonPath("$.error.code").value("INVALID_CSRF"));
 
         mockMvc.perform(post("/api/members/logout").session(loggedIn)
-                        .cookie(currentXsrf).header("X-XSRF-TOKEN", currentXsrf.getValue()))
+                        .cookie(xsrf).header("X-XSRF-TOKEN", xsrf.getValue()))
                 .andExpect(status().isNoContent());
         assertThat(loggedIn.isInvalid()).isTrue();
 
