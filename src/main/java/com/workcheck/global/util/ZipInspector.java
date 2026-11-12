@@ -102,8 +102,12 @@ public final class ZipInspector {
     private static String trimSlashes(String path) {
         int start = 0;
         int end = path.length();
-        while (start < end && path.charAt(start) == '/') start++;
-        while (end > start && path.charAt(end - 1) == '/') end--;
+        while (start < end && path.charAt(start) == '/') {
+            start++;
+        }
+        while (end > start && path.charAt(end - 1) == '/') {
+            end--;
+        }
         return path.substring(start, end);
     }
 }
