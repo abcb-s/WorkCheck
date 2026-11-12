@@ -24,7 +24,7 @@ public class SessionAuthenticator {
     private final SecurityContextRepository securityContextRepository;
     private final SecurityContextHolderStrategy contextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
 
-    public void login(Long memberId) {
+    public void signin(Long memberId) {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
         HttpServletRequest request = attributes.getRequest();
         HttpServletResponse response = attributes.getResponse();

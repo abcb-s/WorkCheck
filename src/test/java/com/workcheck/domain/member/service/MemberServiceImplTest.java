@@ -72,7 +72,7 @@ class MemberServiceImplTest {
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
 
         assertThat(memberService.login(new LoginRequest("A@b.com", "password1")).id()).isEqualTo(1L);
-        verify(sessionAuthenticator).login(1L);
+        verify(sessionAuthenticator).signin(1L);
     }
 
     @Test
@@ -83,7 +83,7 @@ class MemberServiceImplTest {
 
         assertThatThrownBy(() -> memberService.login(new LoginRequest("a@b.com", "wrong")))
                 .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
-        verify(sessionAuthenticator, never()).login(any());
+        verify(sessionAuthenticator, never()).signin(any());
     }
 
     @Test
@@ -92,7 +92,7 @@ class MemberServiceImplTest {
 
         assertThatThrownBy(() -> memberService.login(new LoginRequest("x@b.com", "password1")))
                 .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
-        verify(sessionAuthenticator, never()).login(any());
+        verify(sessionAuthenticator, never()).signin(any());
     }
 
     @Test

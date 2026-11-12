@@ -44,7 +44,7 @@ public class MemberServiceImpl implements MemberService {
         Member member = memberRepository.findByEmail(normalizeEmail(request.email()))
                 .filter(found -> passwordEncoder.matches(request.password(), found.getPassword()))
                 .orElseThrow(() -> new CustomException(ErrorCode.LOGIN_FAILED));
-        sessionAuthenticator.login(member.getId());
+        sessionAuthenticator.signin(member.getId());
         return MemberResponse.from(member);
     }
 
