@@ -66,7 +66,7 @@ class MemberServiceImplTest {
     }
 
     @Test
-    void login_success() {
+    void signin_success() {
         Member member = Member.builder().id(1L).email("a@b.com")
                 .password(passwordEncoder.encode("password1")).name("학생").build();
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
@@ -76,7 +76,7 @@ class MemberServiceImplTest {
     }
 
     @Test
-    void login_wrongPassword_throws() {
+    void signin_wrongPassword_throws() {
         Member member = Member.builder().id(1L).email("a@b.com")
                 .password(passwordEncoder.encode("password1")).name("학생").build();
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
@@ -87,7 +87,7 @@ class MemberServiceImplTest {
     }
 
     @Test
-    void login_unknownEmail_throwsSameError() {
+    void signin_unknownEmail_throwsSameError() {
         given(memberRepository.findByEmail("x@b.com")).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> memberService.signin(new SigninRequest("x@b.com", "password1")))

@@ -45,7 +45,7 @@ class MemberControllerTest {
     @MockitoBean
     private MemberService memberService;
 
-    private static UsernamePasswordAuthenticationToken loggedIn(long memberId) {
+    private static UsernamePasswordAuthenticationToken signedIn(long memberId) {
         return UsernamePasswordAuthenticationToken.authenticated(
                 memberId, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
     }
@@ -99,7 +99,7 @@ class MemberControllerTest {
     }
 
     @Test
-    void login_returns200() throws Exception {
+    void signin_returns200() throws Exception {
         given(memberService.signin(any())).willReturn(MEMBER);
 
         mockMvc.perform(post("/api/members/signin").with(csrf()).contentType(MediaType.APPLICATION_JSON)
@@ -110,7 +110,7 @@ class MemberControllerTest {
     }
 
     @Test
-    void login_wrongCredentials_returns401() throws Exception {
+    void signin_wrongCredentials_returns401() throws Exception {
         given(memberService.signin(any())).willThrow(new CustomException(ErrorCode.SIGNIN_FAILED));
 
         mockMvc.perform(post("/api/members/signin").with(csrf()).contentType(MediaType.APPLICATION_JSON)
@@ -124,7 +124,7 @@ class MemberControllerTest {
     void me_authenticated_returns200() throws Exception {
         given(memberService.getMember(1L)).willReturn(MEMBER);
 
-        mockMvc.perform(get("/api/members/me").with(authentication(loggedIn(1L))))
+        mockMvc.perform(get("/api/members/me").with(authentication(signedIn(1L))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value("a@b.com"));
     }
