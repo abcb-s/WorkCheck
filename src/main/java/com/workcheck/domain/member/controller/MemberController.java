@@ -7,19 +7,11 @@ import com.workcheck.domain.member.service.MemberService;
 import com.workcheck.global.data.BaseResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,12 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class MemberController {
 
     private final MemberService memberService;
-    private final SecurityContextRepository securityContextRepository;
 
     @Operation(summary = "CSRF 토큰 발급", description = "XSRF-TOKEN 쿠키를 내려줘요. 이후 변경 요청에 같은 값을 X-XSRF-TOKEN 헤더로 보내 주세요.")
     @GetMapping("/csrf")
     public ResponseEntity<Void> csrf(CsrfToken csrfToken) {
-        csrfToken.getToken(); // 지연 로딩된 토큰을 로드해 쿠키를 발급
+        csrfToken.getToken();
         return ResponseEntity.noContent().build();
     }
 
@@ -51,22 +42,8 @@ public class MemberController {
 
     @Operation(summary = "로그인", description = "성공하면 세션 쿠키(JSESSIONID)가 발급돼요.")
     @PostMapping("/login")
-    public ResponseEntity<BaseResponse<MemberResponse>> login(@Valid @RequestBody LoginRequest request,
-                                                              HttpServletRequest httpRequest,
-                                                              HttpServletResponse httpResponse) {
-        MemberResponse member = memberService.login(request);
-
-        // 세션 고정 공격 방지: 기존 세션이 있으면 ID를 바꾼다
-        if (httpRequest.getSession(false) != null) {
-            httpRequest.changeSessionId();
-        }
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
-                member.id(), null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
-        SecurityContextHolder.setContext(context);
-        securityContextRepository.saveContext(context, httpRequest, httpResponse);
-
-        return ResponseEntity.ok(BaseResponse.success(member));
+    public ResponseEntity<BaseResponse<MemberResponse>> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(memberService.login(request)));
     }
 
     @Operation(summary = "내 정보 조회")

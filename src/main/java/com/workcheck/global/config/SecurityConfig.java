@@ -29,15 +29,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 세션 기반 인증 설정.
- * <ul>
- *   <li>로그인: MemberController가 비밀번호를 검증한 뒤 SecurityContext를 세션에 저장한다.
- *       principal은 회원 ID(Long)이며 컨트롤러에서 {@code @AuthenticationPrincipal Long memberId}로 받는다.</li>
- *   <li>CSRF: SPA 모드. 서버가 XSRF-TOKEN 쿠키를 내려주고, 프론트는 같은 값을 X-XSRF-TOKEN 헤더로 보낸다.</li>
- *   <li>인가: 아래 공개 경로를 뺀 모든 요청은 로그인이 필요하다. 새 API는 자동으로 보호된다.</li>
- * </ul>
- */
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -58,7 +49,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .spa()
                         .ignoringRequestMatchers("/h2-console/**"))
-                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)) // H2 콘솔
+                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
@@ -94,7 +85,7 @@ public class SecurityConfig {
         config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true); // 세션 쿠키 전송
+        config.setAllowCredentials(true);
         config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);

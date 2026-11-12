@@ -10,9 +10,6 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.commons.compress.utils.SeekableInMemoryByteChannel;
 
-/**
- * ZIP 내부 경로 목록을 읽고 필수 경로 포함 여부를 판정한다.
- */
 public final class ZipInspector {
 
     private static final String MACOS_METADATA_DIR = "__MACOSX/";
@@ -21,6 +18,7 @@ public final class ZipInspector {
     private ZipInspector() {
     }
 
+    /** ZIP 내부 엔트리 경로 목록을 읽는다. */
     public static List<String> listEntries(byte[] content) {
         try (ZipFile zipFile = ZipFile.builder()
                 .setSeekableByteChannel(new SeekableInMemoryByteChannel(content))
@@ -35,10 +33,7 @@ public final class ZipInspector {
         }
     }
 
-    /**
-     * 경로가 존재하는지 확인한다. 모든 엔트리가 하나의 최상위 폴더를 공유하면(GitHub ZIP)
-     * 그 폴더를 제거한 경로로도 확인한다. 이때 macOS 메타데이터 엔트리는 무시한다. 디렉터리 경로(예: "src/")도 하위 엔트리가 있으면 존재로 본다.
-     */
+    /** 필수 경로가 ZIP에 있는지 확인하고, 공통 최상위 폴더를 벗긴 경로로도 확인한다. */
     public static boolean containsPath(List<String> entries, String requiredPath) {
         String target = trimSlashes(normalize(requiredPath));
         if (target.isEmpty()) {

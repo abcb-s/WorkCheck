@@ -78,7 +78,7 @@ class MemberControllerTest {
 
     @Test
     void signup_passwordOverBcryptLimit_returns400() throws Exception {
-        String password = "가".repeat(30); // 30자지만 UTF-8로 90바이트
+        String password = "가".repeat(30);
 
         mockMvc.perform(post("/api/members").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"a@b.com\",\"password\":\"" + password + "\",\"name\":\"학생\"}"))
@@ -94,6 +94,17 @@ class MemberControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content(SIGNUP_JSON))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DUPLICATE_EMAIL"));
+    }
+
+    @Test
+    void login_returns200() throws Exception {
+        given(memberService.login(any())).willReturn(MEMBER);
+
+        mockMvc.perform(post("/api/members/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"a@b.com","password":"password1"}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(1));
     }
 
     @Test

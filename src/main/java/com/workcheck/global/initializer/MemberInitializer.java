@@ -10,9 +10,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 데모 회원을 만든다. 비밀번호를 BCrypt로 인코딩해야 해서 data.sql 대신 코드로 넣는다.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -24,6 +21,7 @@ public class MemberInitializer implements ApplicationRunner {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /** 데모 회원이 없으면 만든다. */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void run(ApplicationArguments args) {
