@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<BaseResponse<Void>> handleCustom(CustomException e) {
-        return toResponse(e.getErrorCode(), e.getErrorCode().getMessage());
+        return toResponse(e.getErrorCode());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -44,38 +44,42 @@ public class GlobalExceptionHandler {
             MultipartException.class
     })
     public ResponseEntity<BaseResponse<Void>> handleBadRequest(Exception e) {
-        return toResponse(ErrorCode.INVALID_INPUT, ErrorCode.INVALID_INPUT.getMessage());
+        return toResponse(ErrorCode.INVALID_INPUT);
     }
 
     @ExceptionHandler(MissingServletRequestPartException.class)
     public ResponseEntity<BaseResponse<Void>> handleMissingPart(MissingServletRequestPartException e) {
-        return toResponse(ErrorCode.EMPTY_FILE, ErrorCode.EMPTY_FILE.getMessage());
+        return toResponse(ErrorCode.EMPTY_FILE);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<BaseResponse<Void>> handleMaxUploadSize(MaxUploadSizeExceededException e) {
-        return toResponse(ErrorCode.FILE_TOO_LARGE, ErrorCode.FILE_TOO_LARGE.getMessage());
+        return toResponse(ErrorCode.FILE_TOO_LARGE);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<BaseResponse<Void>> handleNoResource(NoResourceFoundException e) {
-        return toResponse(ErrorCode.RESOURCE_NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND.getMessage());
+        return toResponse(ErrorCode.RESOURCE_NOT_FOUND);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<BaseResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
-        return toResponse(ErrorCode.METHOD_NOT_ALLOWED, ErrorCode.METHOD_NOT_ALLOWED.getMessage());
+        return toResponse(ErrorCode.METHOD_NOT_ALLOWED);
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<BaseResponse<Void>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
-        return toResponse(ErrorCode.UNSUPPORTED_MEDIA_TYPE, ErrorCode.UNSUPPORTED_MEDIA_TYPE.getMessage());
+        return toResponse(ErrorCode.UNSUPPORTED_MEDIA_TYPE);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<BaseResponse<Void>> handleUnexpected(Exception e) {
         log.error("Unhandled exception", e);
-        return toResponse(ErrorCode.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_SERVER_ERROR.getMessage());
+        return toResponse(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+
+    private ResponseEntity<BaseResponse<Void>> toResponse(ErrorCode errorCode) {
+        return toResponse(errorCode, errorCode.getMessage());
     }
 
     private ResponseEntity<BaseResponse<Void>> toResponse(ErrorCode errorCode, String message) {
