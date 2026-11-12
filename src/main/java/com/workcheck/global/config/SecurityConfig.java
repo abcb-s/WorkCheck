@@ -13,10 +13,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -30,11 +28,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
-@EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private static final String[] PUBLIC_DOCS = {"/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**"};
+    private static final String[] PUBLIC_PATHS = {"/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**"};
 
     private final JsonMapper jsonMapper;
 
@@ -52,10 +49,9 @@ public class SecurityConfig {
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_DOCS).permitAll()
+                        .requestMatchers(PUBLIC_PATHS).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/members/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/members", "/api/members/login").permitAll()
                         .anyRequest().authenticated())
@@ -83,7 +79,7 @@ public class SecurityConfig {
     private CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(allowedOrigins);
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
