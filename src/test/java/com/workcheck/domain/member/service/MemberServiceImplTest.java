@@ -82,7 +82,7 @@ class MemberServiceImplTest {
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
 
         assertThatThrownBy(() -> memberService.signin(new SigninRequest("a@b.com", "wrong")))
-                .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
+                .extracting("errorCode").isEqualTo(ErrorCode.SIGNIN_FAILED);
         verify(sessionAuthenticator, never()).signin(any());
     }
 
@@ -91,7 +91,7 @@ class MemberServiceImplTest {
         given(memberRepository.findByEmail("x@b.com")).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> memberService.signin(new SigninRequest("x@b.com", "password1")))
-                .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
+                .extracting("errorCode").isEqualTo(ErrorCode.SIGNIN_FAILED);
         verify(sessionAuthenticator, never()).signin(any());
     }
 

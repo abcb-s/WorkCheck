@@ -43,7 +43,7 @@ public class MemberServiceImpl implements MemberService {
     public MemberResponse signin(SigninRequest request) {
         Member member = memberRepository.findByEmail(normalizeEmail(request.email()))
                 .filter(found -> passwordEncoder.matches(request.password(), found.getPassword()))
-                .orElseThrow(() -> new CustomException(ErrorCode.LOGIN_FAILED));
+                .orElseThrow(() -> new CustomException(ErrorCode.SIGNIN_FAILED));
         sessionAuthenticator.signin(member.getId());
         return MemberResponse.from(member);
     }

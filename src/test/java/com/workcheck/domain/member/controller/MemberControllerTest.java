@@ -111,13 +111,13 @@ class MemberControllerTest {
 
     @Test
     void login_wrongCredentials_returns401() throws Exception {
-        given(memberService.signin(any())).willThrow(new CustomException(ErrorCode.LOGIN_FAILED));
+        given(memberService.signin(any())).willThrow(new CustomException(ErrorCode.SIGNIN_FAILED));
 
         mockMvc.perform(post("/api/members/signin").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"a@b.com","password":"wrong-pass"}"""))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("LOGIN_FAILED"));
+                .andExpect(jsonPath("$.error.code").value("SIGNIN_FAILED"));
     }
 
     @Test
