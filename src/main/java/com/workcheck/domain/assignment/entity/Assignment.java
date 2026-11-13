@@ -44,4 +44,11 @@ public class Assignment extends BaseTimeEntity {
         rule.assignTo(this);
     }
 
+    public void updateTitle(String title) {
+        this.title = title;
+    }
+
+    public void clearRules() {
+        rules.clear();
+    }
 }

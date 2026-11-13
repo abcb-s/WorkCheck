@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.workcheck.domain.assignment.dto.request.AssignmentRequest;
 import com.workcheck.domain.assignment.dto.request.CheckRuleRequest;
@@ -105,4 +107,50 @@ class AssignmentServiceImplTest {
                 .extracting("errorCode").isEqualTo(ErrorCode.ASSIGNMENT_NOT_FOUND);
     }
 
+    @ParameterizedTest
+    @CsvSource({"ZIP, PDF_REQUIRED_TEXT", "PDF, ZIP_REQUIRED_PATH"})
+    void updateAssignment_wrongRuleCombination_keepsTitleAndRules(FileType fileType, RuleType type) {
+        Assignment assignment = Assignment.builder().id(1L).title("기존 과제").build();
+        CheckRule originalRule = CheckRule.builder().id(10L).fileType(FileType.PDF)
+                .type(RuleType.PDF_REQUIRED_TEXT).value("참고문헌").build();
+        assignment.addRule(originalRule);
+        given(assignmentRepository.findByIdWithRules(1L)).willReturn(Optional.of(assignment));
+        AssignmentRequest request = new AssignmentRequest("수정한 과제", List.of(
+                new CheckRuleRequest(FileType.ZIP, RuleType.FILE_NAME_SUFFIX, ".zip"),
+                new CheckRuleRequest(fileType, type, "필수값")
+        ));
+
+        assertThatThrownBy(() -> assignmentService.updateAssignment(1L, request))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT);
+
+        assertThat(assignment.getTitle()).isEqualTo("기존 과제");
+        assertThat(assignment.getRules()).containsExactly(originalRule);
+        verify(assignmentRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void updateAssignment_notFound_throws() {
+        given(assignmentRepository.findByIdWithRules(99L)).willReturn(Optional.empty());
+        AssignmentRequest request = new AssignmentRequest("과제", List.of(
+                new CheckRuleRequest(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌")
+        ));
+
+        assertThatThrownBy(() -> assignmentService.updateAssignment(99L, request))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.ASSIGNMENT_NOT_FOUND);
+
+        verify(assignmentRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void deleteAssignment_notFound_throws() {
+        given(assignmentRepository.findByIdWithRules(99L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> assignmentService.deleteAssignment(99L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.ASSIGNMENT_NOT_FOUND);
+
+        verify(assignmentRepository, never()).delete(any(Assignment.class));
+    }
 }

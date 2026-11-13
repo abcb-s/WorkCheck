@@ -11,9 +11,11 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,4 +48,17 @@ public class AssignmentController {
         return ResponseEntity.ok(BaseResponse.success(assignmentService.getAssignment(assignmentId)));
     }
 
+    @Operation(summary = "과제와 검사 규칙 전체 수정")
+    @PutMapping("/{assignmentId}")
+    public ResponseEntity<BaseResponse<AssignmentResponse>> updateAssignment(
+            @PathVariable Long assignmentId, @Valid @RequestBody AssignmentRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(assignmentService.updateAssignment(assignmentId, request)));
+    }
+
+    @Operation(summary = "과제와 검사 규칙 삭제")
+    @DeleteMapping("/{assignmentId}")
+    public ResponseEntity<Void> deleteAssignment(@PathVariable Long assignmentId) {
+        assignmentService.deleteAssignment(assignmentId);
+        return ResponseEntity.noContent().build();
+    }
 }

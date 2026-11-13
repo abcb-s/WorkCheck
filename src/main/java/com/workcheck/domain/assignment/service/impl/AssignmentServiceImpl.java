@@ -60,6 +60,37 @@ public class AssignmentServiceImpl implements AssignmentService {
         return AssignmentResponse.from(assignment);
     }
 
+    @Override
+    public AssignmentResponse updateAssignment(Long assignmentId, AssignmentRequest request) {
+        Assignment assignment = assignmentRepository.findByIdWithRules(assignmentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND));
+
+        for (CheckRuleRequest rule : request.rules()) {
+            validateRule(rule);
+        }
+
+        assignment.updateTitle(request.title().strip());
+        assignment.clearRules();
+
+        for (CheckRuleRequest rule : request.rules()) {
+            assignment.addRule(CheckRule.builder()
+                    .fileType(rule.fileType())
+                    .type(rule.type())
+                    .value(rule.value())
+                    .build());
+        }
+
+        return AssignmentResponse.from(assignmentRepository.saveAndFlush(assignment));
+    }
+
+    @Override
+    public void deleteAssignment(Long assignmentId) {
+        Assignment assignment = assignmentRepository.findByIdWithRules(assignmentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND));
+
+        assignmentRepository.delete(assignment);
+    }
+
     private void validateRule(CheckRuleRequest rule) {
         if (rule.fileType() == FileType.ZIP && rule.type() == RuleType.PDF_REQUIRED_TEXT) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
