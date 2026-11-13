@@ -12,4 +12,7 @@ public interface AssignmentService {
 
     AssignmentResponse getAssignment(Long assignmentId);
 
+    AssignmentResponse updateAssignment(Long assignmentId, AssignmentRequest request);
+
+    void deleteAssignment(Long assignmentId);
 }
