@@ -67,13 +67,13 @@ class AssignmentFlowTest {
     private Cookie xsrf;
 
     @BeforeEach
-    void login() throws Exception {
+    void signin() throws Exception {
         MvcResult csrfResult = mockMvc.perform(get("/api/members/csrf"))
                 .andExpect(status().isNoContent()).andReturn();
         xsrf = csrfResult.getResponse().getCookie("XSRF-TOKEN");
         assertThat(xsrf).isNotNull();
 
-        MvcResult result = mockMvc.perform(post("/api/members/login")
+        MvcResult result = mockMvc.perform(post("/api/members/signin")
                         .cookie(xsrf).header("X-XSRF-TOKEN", xsrf.getValue())
                         .contentType(MediaType.APPLICATION_JSON).content("""
                                 {"email":"demo@workcheck.com","password":"password1234"}
