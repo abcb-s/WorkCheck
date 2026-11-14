@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
 
-    @Query("select distinct a from Assignment a left join fetch a.rules order by a.id desc")
+    @Query("select a from Assignment a left join fetch a.rules order by a.id desc")
     List<Assignment> findAllWithRules();
 
     @Query("select a from Assignment a left join fetch a.rules where a.id = :assignmentId")
