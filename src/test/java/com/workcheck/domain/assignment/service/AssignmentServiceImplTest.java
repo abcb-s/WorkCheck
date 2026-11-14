@@ -70,7 +70,7 @@ class AssignmentServiceImplTest {
 
         assertThatThrownBy(() -> assignmentService.createAssignment(request))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT);
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_RULE_COMBINATION);
 
         verifyNoInteractions(assignmentRepository);
     }
@@ -122,7 +122,7 @@ class AssignmentServiceImplTest {
 
         assertThatThrownBy(() -> assignmentService.updateAssignment(1L, request))
                 .isInstanceOf(CustomException.class)
-                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_INPUT);
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_RULE_COMBINATION);
 
         assertThat(assignment.getTitle()).isEqualTo("기존 과제");
         assertThat(assignment.getRules()).containsExactly(originalRule);

@@ -16,10 +16,12 @@ import com.workcheck.global.data.FileType;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -42,7 +44,7 @@ class AssignmentFlowTest {
               "title": "처음 과제",
               "rules": [
                 {"fileType": "ZIP", "type": "ZIP_REQUIRED_PATH", "value": "data.sql"},
-                {"fileType": "PDF", "type": "PDF_REQUIRED_TEXT", "value": "  참고문헌  "},
+                {"fileType": "PDF", "type": "PDF_REQUIRED_TEXT", "value": "참고문헌"},
                 {"fileType": "PDF", "type": "FILE_NAME_SUFFIX", "value": "_보고서.pdf"}
               ]
             }
@@ -151,24 +153,28 @@ class AssignmentFlowTest {
                 .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND"));
     }
 
+    static Stream<Arguments> invalidUpdates() {
+        return Stream.of(
+                Arguments.of("""
+                        {"title":"수정한 과제","rules":[
+                          {"fileType":"ZIP","type":"FILE_NAME_SUFFIX","value":".zip"},
+                          {"fileType":"PDF","type":"ZIP_REQUIRED_PATH","value":"data.sql"}
+                        ]}
+                        """, "INVALID_RULE_COMBINATION"),
+                Arguments.of("""
+                        {"title":"수정한 과제","rules":[
+                          {"fileType":"PDF","type":"FILE_NAME_SUFFIX","value":".pdf"},
+                          {"fileType":"ZIP","type":"PDF_REQUIRED_TEXT","value":"결론"}
+                        ]}
+                        """, "INVALID_RULE_COMBINATION"),
+                Arguments.of("{\"title\":\" \",\"rules\":[]}", "INVALID_INPUT")
+        );
+    }
+
     @ParameterizedTest
-    @ValueSource(strings = {
-            """
-            {"title":"수정한 과제","rules":[
-              {"fileType":"ZIP","type":"FILE_NAME_SUFFIX","value":".zip"},
-              {"fileType":"PDF","type":"ZIP_REQUIRED_PATH","value":"data.sql"}
-            ]}
-            """,
-            """
-            {"title":"수정한 과제","rules":[
-              {"fileType":"PDF","type":"FILE_NAME_SUFFIX","value":".pdf"},
-              {"fileType":"ZIP","type":"PDF_REQUIRED_TEXT","value":"결론"}
-            ]}
-            """,
-            "{\"title\":\" \",\"rules\":[] }"
-    })
+    @MethodSource("invalidUpdates")
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    void updateAssignment_invalidInput_keepsPersistedTitleAndRules(String request) throws Exception {
+    void updateAssignment_invalidInput_keepsPersistedTitleAndRules(String request, String errorCode) throws Exception {
         MvcResult created = mockMvc.perform(post("/api/assignments").with(signedIn())
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isCreated()).andReturn();
@@ -181,7 +187,7 @@ class AssignmentFlowTest {
             mockMvc.perform(put("/api/assignments/" + assignmentId).with(signedIn())
                             .contentType(MediaType.APPLICATION_JSON).content(request))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+                    .andExpect(jsonPath("$.error.code").value(errorCode));
 
             MvcResult found = mockMvc.perform(get("/api/assignments/" + assignmentId).with(signedIn()))
                     .andExpect(status().isOk()).andReturn();
@@ -248,8 +254,10 @@ class AssignmentFlowTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+                .andExpect(jsonPath("$.error.code").value("INVALID_RULE_COMBINATION"))
+                .andExpect(jsonPath("$.error.message").value("파일 형식과 검사 규칙 종류가 일치하지 않습니다."));
 
         assertThat(assignmentRepository.count()).isEqualTo(before);
     }
+
 }

@@ -10,6 +10,7 @@ public enum ErrorCode {
 
     // 400
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "INVALID_INPUT", "요청 값이 올바르지 않아요."),
+    INVALID_RULE_COMBINATION(HttpStatus.BAD_REQUEST, "INVALID_RULE_COMBINATION", "파일 형식과 검사 규칙 종류가 일치하지 않습니다."),
     EMPTY_FILE(HttpStatus.BAD_REQUEST, "EMPTY_FILE", "업로드한 파일이 비어 있어요."),
     INVALID_FILE(HttpStatus.BAD_REQUEST, "INVALID_FILE", "파일이 손상되었거나 읽을 수 없어요."),
     NO_APPLICABLE_RULE(HttpStatus.BAD_REQUEST, "NO_APPLICABLE_RULE", "이 파일 형식에 적용할 검사 규칙이 없어요."),
