@@ -1,6 +1,7 @@
 package com.workcheck.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -12,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.workcheck.domain.assignment.repository.AssignmentRepository;
 import com.workcheck.domain.assignment.repository.CheckRuleRepository;
 import com.workcheck.domain.assignment.entity.CheckRule;
+import com.workcheck.domain.assignment.entity.Assignment;
 import com.workcheck.global.data.FileType;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.Cookie;
@@ -235,8 +237,12 @@ class AssignmentFlowTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].id").value(assignmentId));
 
-        assertThat(checkRuleRepository.findByAssignment_IdAndFileType(assignmentId, FileType.ZIP)).hasSize(1);
-        assertThat(checkRuleRepository.findByAssignment_IdAndFileType(assignmentId, FileType.PDF)).hasSize(1);
+        entityManager.flush();
+        entityManager.clear();
+        Assignment persisted = assignmentRepository.findByIdWithRules(assignmentId).orElseThrow();
+        assertThat(persisted.getRules()).extracting(CheckRule::getFileType, CheckRule::getValue)
+                .containsExactly(tuple(FileType.ZIP, "src/main/resources/data.sql"),
+                        tuple(FileType.PDF, "참고문헌"));
     }
 
     @Test

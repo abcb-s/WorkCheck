@@ -35,9 +35,6 @@ class AssignmentRepositoryTest {
     private AssignmentRepository assignmentRepository;
 
     @Autowired
-    private CheckRuleRepository checkRuleRepository;
-
-    @Autowired
     private EntityManager entityManager;
 
     private CheckRule rule(FileType fileType, RuleType type, String value) {
@@ -83,25 +80,4 @@ class AssignmentRepositoryTest {
                 .containsExactly("_보고서.pdf", "참고문헌");
     }
 
-    @Test
-    void findRules_filtersByAssignmentAndFileType() {
-        Assignment assignment = Assignment.builder().title("프로젝트").build();
-        assignment.addRule(rule(FileType.ZIP, RuleType.ZIP_REQUIRED_PATH, "data.sql"));
-        assignment.addRule(rule(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌"));
-        assignmentRepository.saveAndFlush(assignment);
-
-        Assignment other = Assignment.builder().title("다른 프로젝트").build();
-        other.addRule(rule(FileType.ZIP, RuleType.ZIP_REQUIRED_PATH, "README.md"));
-        assignmentRepository.saveAndFlush(other);
-        entityManager.clear();
-
-        List<CheckRule> rules = checkRuleRepository.findByAssignment_IdAndFileType(
-                assignment.getId(), FileType.ZIP);
-
-        assertThat(rules).singleElement().satisfies(rule -> {
-            assertThat(rule.getValue()).isEqualTo("data.sql");
-            assertThat(rule.getAssignment().getId()).isEqualTo(assignment.getId());
-        });
-        assertThat(checkRuleRepository.findByAssignment_IdAndFileType(0L, FileType.PDF)).isEmpty();
-    }
 }
