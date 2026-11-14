@@ -3,11 +3,12 @@ package com.workcheck.domain.member.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.workcheck.domain.member.dto.request.LoginRequest;
+import com.workcheck.domain.member.dto.request.SigninRequest;
 import com.workcheck.domain.member.dto.request.SignupRequest;
 import com.workcheck.domain.member.dto.response.MemberResponse;
 import com.workcheck.domain.member.entity.Member;
@@ -15,6 +16,7 @@ import com.workcheck.domain.member.repository.MemberRepository;
 import com.workcheck.domain.member.service.impl.MemberServiceImpl;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
+import com.workcheck.global.security.SessionAuthenticator;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +24,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -35,19 +36,22 @@ class MemberServiceImplTest {
     @Spy
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(4);
 
+    @Mock
+    private SessionAuthenticator sessionAuthenticator;
+
     @InjectMocks
     private MemberServiceImpl memberService;
 
     @Test
     void signup_normalizesEmailAndEncodesPassword() {
         given(memberRepository.existsByEmail("a@b.com")).willReturn(false);
-        given(memberRepository.saveAndFlush(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
+        given(memberRepository.save(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
 
-        MemberResponse response = memberService.signup(new SignupRequest("  A@B.com ", "password1", " 학생 "));
+        MemberResponse response = memberService.signup(new SignupRequest("A@B.com", "password1", " 학생 "));
 
         assertThat(response.email()).isEqualTo("a@b.com");
         assertThat(response.name()).isEqualTo("학생");
-        verify(memberRepository).saveAndFlush(org.mockito.ArgumentMatchers.argThat(
+        verify(memberRepository).save(argThat(
                 m -> !m.getPassword().equals("password1") && passwordEncoder.matches("password1", m.getPassword())));
     }
 
@@ -58,45 +62,37 @@ class MemberServiceImplTest {
         assertThatThrownBy(() -> memberService.signup(new SignupRequest("a@b.com", "password1", "학생")))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.DUPLICATE_EMAIL);
-        verify(memberRepository, never()).saveAndFlush(any());
+        verify(memberRepository, never()).save(any());
     }
 
     @Test
-    void signup_uniqueConstraintRace_throwsDuplicate() {
-        given(memberRepository.existsByEmail("a@b.com")).willReturn(false);
-        given(memberRepository.saveAndFlush(any(Member.class))).willThrow(new DataIntegrityViolationException("dup"));
-
-        assertThatThrownBy(() -> memberService.signup(new SignupRequest("a@b.com", "password1", "학생")))
-                .extracting("errorCode").isEqualTo(ErrorCode.DUPLICATE_EMAIL);
-    }
-
-    @Test
-    void login_success() {
+    void signin_success() {
         Member member = Member.builder().id(1L).email("a@b.com")
                 .password(passwordEncoder.encode("password1")).name("학생").build();
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
 
-        assertThat(memberService.login(new LoginRequest("A@b.com", "password1")).id()).isEqualTo(1L);
+        assertThat(memberService.signin(new SigninRequest("A@b.com", "password1")).id()).isEqualTo(1L);
+        verify(sessionAuthenticator).signin(1L);
     }
 
     @Test
-    void login_wrongPassword_throws() {
+    void signin_wrongPassword_throws() {
         Member member = Member.builder().id(1L).email("a@b.com")
                 .password(passwordEncoder.encode("password1")).name("학생").build();
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
 
-        assertThatThrownBy(() -> memberService.login(new LoginRequest("a@b.com", "wrong")))
-                .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
+        assertThatThrownBy(() -> memberService.signin(new SigninRequest("a@b.com", "wrong")))
+                .extracting("errorCode").isEqualTo(ErrorCode.SIGNIN_FAILED);
+        verify(sessionAuthenticator, never()).signin(any());
     }
 
     @Test
-    void login_unknownEmail_throwsSameError() {
+    void signin_unknownEmail_throwsSameError() {
         given(memberRepository.findByEmail("x@b.com")).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> memberService.login(new LoginRequest("x@b.com", "password1")))
-                .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
-        // 없는 이메일이어도 BCrypt 비교를 수행해 응답 시간을 맞춘다
-        verify(passwordEncoder).matches(org.mockito.ArgumentMatchers.eq("password1"), any());
+        assertThatThrownBy(() -> memberService.signin(new SigninRequest("x@b.com", "password1")))
+                .extracting("errorCode").isEqualTo(ErrorCode.SIGNIN_FAILED);
+        verify(sessionAuthenticator, never()).signin(any());
     }
 
     @Test

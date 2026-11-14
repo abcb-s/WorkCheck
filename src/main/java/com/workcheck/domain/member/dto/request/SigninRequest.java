@@ -2,7 +2,7 @@ package com.workcheck.domain.member.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 
-public record LoginRequest(
+public record SigninRequest(
         @NotBlank(message = "이메일을 입력해 주세요.")
         String email,
 

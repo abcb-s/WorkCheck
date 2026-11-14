@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -30,6 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(MemberController.class)
 @Import(SecurityConfig.class)
+@MockitoBean(types = JpaMetamodelMappingContext.class)
 class MemberControllerTest {
 
     private static final MemberResponse MEMBER =
@@ -43,7 +45,7 @@ class MemberControllerTest {
     @MockitoBean
     private MemberService memberService;
 
-    private static UsernamePasswordAuthenticationToken loggedIn(long memberId) {
+    private static UsernamePasswordAuthenticationToken signedIn(long memberId) {
         return UsernamePasswordAuthenticationToken.authenticated(
                 memberId, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
     }
@@ -78,7 +80,7 @@ class MemberControllerTest {
 
     @Test
     void signup_passwordOverBcryptLimit_returns400() throws Exception {
-        String password = "가".repeat(30); // 30자지만 UTF-8로 90바이트
+        String password = "가".repeat(30);
 
         mockMvc.perform(post("/api/members").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"a@b.com\",\"password\":\"" + password + "\",\"name\":\"학생\"}"))
@@ -97,21 +99,32 @@ class MemberControllerTest {
     }
 
     @Test
-    void login_wrongCredentials_returns401() throws Exception {
-        given(memberService.login(any())).willThrow(new CustomException(ErrorCode.LOGIN_FAILED));
+    void signin_returns200() throws Exception {
+        given(memberService.signin(any())).willReturn(MEMBER);
 
-        mockMvc.perform(post("/api/members/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/members/signin").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"a@b.com","password":"password1"}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(1));
+    }
+
+    @Test
+    void signin_wrongCredentials_returns401() throws Exception {
+        given(memberService.signin(any())).willThrow(new CustomException(ErrorCode.SIGNIN_FAILED));
+
+        mockMvc.perform(post("/api/members/signin").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"a@b.com","password":"wrong-pass"}"""))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("LOGIN_FAILED"));
+                .andExpect(jsonPath("$.error.code").value("SIGNIN_FAILED"));
     }
 
     @Test
     void me_authenticated_returns200() throws Exception {
         given(memberService.getMember(1L)).willReturn(MEMBER);
 
-        mockMvc.perform(get("/api/members/me").with(authentication(loggedIn(1L))))
+        mockMvc.perform(get("/api/members/me").with(authentication(signedIn(1L))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value("a@b.com"));
     }
@@ -131,7 +144,7 @@ class MemberControllerTest {
 
     @Test
     void cors_preflight_allowedOrigin() throws Exception {
-        mockMvc.perform(options("/api/members/login")
+        mockMvc.perform(options("/api/members/signin")
                         .header("Origin", "http://localhost:5173")
                         .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isOk())
@@ -141,7 +154,7 @@ class MemberControllerTest {
 
     @Test
     void cors_preflight_unknownOrigin_rejected() throws Exception {
-        mockMvc.perform(options("/api/members/login")
+        mockMvc.perform(options("/api/members/signin")
                         .header("Origin", "http://evil.example")
                         .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isForbidden());

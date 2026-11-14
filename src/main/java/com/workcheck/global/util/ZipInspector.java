@@ -3,42 +3,52 @@ package com.workcheck.global.util;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.commons.compress.utils.SeekableInMemoryByteChannel;
 
-/**
- * ZIP 내부 경로 목록을 읽고 필수 경로 포함 여부를 판정한다.
- */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ZipInspector {
 
     private static final String MACOS_METADATA_DIR = "__MACOSX/";
     private static final String DS_STORE = ".DS_Store";
+    private static final Charset CP949 = Charset.forName("MS949");
 
-    private ZipInspector() {
-    }
-
+    /** ZIP 내부 엔트리 경로 목록을 읽는다. */
     public static List<String> listEntries(byte[] content) {
         try (ZipFile zipFile = ZipFile.builder()
                 .setSeekableByteChannel(new SeekableInMemoryByteChannel(content))
                 .get()) {
             List<String> names = new ArrayList<>();
             for (ZipArchiveEntry entry : Collections.list(zipFile.getEntries())) {
-                names.add(normalize(entry.getName()));
+                names.add(normalize(decodeName(entry)));
             }
             return names;
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException e) {
             throw new CustomException(ErrorCode.INVALID_FILE, e);
         }
     }
 
-    /**
-     * 경로가 존재하는지 확인한다. 모든 엔트리가 하나의 최상위 폴더를 공유하면(GitHub ZIP)
-     * 그 폴더를 제거한 경로로도 확인한다. 이때 macOS 메타데이터 엔트리는 무시한다. 디렉터리 경로(예: "src/")도 하위 엔트리가 있으면 존재로 본다.
-     */
+    /** 엔트리 이름을 UTF-8로 읽고, UTF-8이 아니면 CP949로 읽는다. */
+    private static String decodeName(ZipArchiveEntry entry) {
+        byte[] raw = entry.getRawName();
+        try {
+            return StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(raw)).toString();
+        } catch (CharacterCodingException e) {
+            return new String(raw, CP949);
+        }
+    }
+
+    /** 필수 경로가 ZIP에 있는지 확인하고, 공통 최상위 폴더를 벗긴 경로로도 확인한다. */
     public static boolean containsPath(List<String> entries, String requiredPath) {
         String target = trimSlashes(normalize(requiredPath));
         if (target.isEmpty()) {
@@ -107,8 +117,12 @@ public final class ZipInspector {
     private static String trimSlashes(String path) {
         int start = 0;
         int end = path.length();
-        while (start < end && path.charAt(start) == '/') start++;
-        while (end > start && path.charAt(end - 1) == '/') end--;
+        while (start < end && path.charAt(start) == '/') {
+            start++;
+        }
+        while (end > start && path.charAt(end - 1) == '/') {
+            end--;
+        }
         return path.substring(start, end);
     }
 }
