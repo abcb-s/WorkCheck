@@ -42,7 +42,7 @@ class AssignmentFlowTest {
               "title": "처음 과제",
               "rules": [
                 {"fileType": "ZIP", "type": "ZIP_REQUIRED_PATH", "value": "data.sql"},
-                {"fileType": "PDF", "type": "PDF_REQUIRED_TEXT", "value": "참고문헌"},
+                {"fileType": "PDF", "type": "PDF_REQUIRED_TEXT", "value": "  참고문헌  "},
                 {"fileType": "PDF", "type": "FILE_NAME_SUFFIX", "value": "_보고서.pdf"}
               ]
             }
@@ -113,7 +113,7 @@ class AssignmentFlowTest {
                                 {
                                   "title": "  수정한 과제  ",
                                   "rules": [
-                                    {"fileType": "PDF", "type": "PDF_REQUIRED_TEXT", "value": "결론"}
+                                    {"fileType": "PDF", "type": "PDF_REQUIRED_TEXT", "value": "  결론 문구  "}
                                   ]
                                 }
                                 """))
@@ -122,6 +122,7 @@ class AssignmentFlowTest {
                 .andExpect(jsonPath("$.data.title").value("수정한 과제"))
                 .andExpect(jsonPath("$.data.rules.length()").value(1))
                 .andExpect(jsonPath("$.data.rules[0].id").isNumber())
+                .andExpect(jsonPath("$.data.rules[0].value").value("결론 문구"))
                 .andExpect(jsonPath("$.data.createdAt").value(original.get("createdAt").asText()))
                 .andReturn();
         long newRuleId = jsonMapper.readTree(updated.getResponse().getContentAsString())
@@ -135,7 +136,7 @@ class AssignmentFlowTest {
         mockMvc.perform(get("/api/assignments/" + assignmentId).with(signedIn()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value("수정한 과제"))
-                .andExpect(jsonPath("$.data.rules[0].value").value("결론"));
+                .andExpect(jsonPath("$.data.rules[0].value").value("결론 문구"));
 
         mockMvc.perform(delete("/api/assignments/" + assignmentId).with(signedIn()))
                 .andExpect(status().isNoContent())
@@ -204,8 +205,8 @@ class AssignmentFlowTest {
                                 {
                                   "title": "  자바 프로젝트  ",
                                   "rules": [
-                                    {"fileType": "ZIP", "type": "ZIP_REQUIRED_PATH", "value": "src/main/resources/data.sql"},
-                                    {"fileType": "PDF", "type": "PDF_REQUIRED_TEXT", "value": "참고문헌"}
+                                    {"fileType": "ZIP", "type": "ZIP_REQUIRED_PATH", "value": "  src/main/resources/data.sql  "},
+                                    {"fileType": "PDF", "type": "PDF_REQUIRED_TEXT", "value": "  참고문헌  "}
                                   ]
                                 }
                                 """))
