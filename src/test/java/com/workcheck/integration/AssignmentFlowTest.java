@@ -15,6 +15,7 @@ import com.workcheck.domain.assignment.repository.CheckRuleRepository;
 import com.workcheck.domain.assignment.entity.CheckRule;
 import com.workcheck.domain.assignment.entity.Assignment;
 import com.workcheck.global.data.FileType;
+import com.workcheck.global.data.RuleType;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
@@ -266,4 +267,27 @@ class AssignmentFlowTest {
         assertThat(assignmentRepository.count()).isEqualTo(before);
     }
 
+    @Test
+    void demoAssignments_loadPdfAndZipRules() throws Exception {
+        List<Assignment> assignments = assignmentRepository.findAllWithRules();
+
+        assertThat(assignments).filteredOn("title", "과학 탐구 보고서")
+                .singleElement().satisfies(assignment ->
+                        assertThat(assignment.getRules())
+                                .extracting(CheckRule::getFileType, CheckRule::getType, CheckRule::getValue)
+                                .containsExactly(
+                                        tuple(FileType.PDF, RuleType.FILE_NAME_SUFFIX, "_보고서.pdf"),
+                                        tuple(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌")));
+        assertThat(assignments).filteredOn("title", "자바 프로젝트")
+                .singleElement().satisfies(assignment ->
+                        assertThat(assignment.getRules())
+                                .extracting(CheckRule::getFileType, CheckRule::getType, CheckRule::getValue)
+                                .containsExactly(
+                                        tuple(FileType.ZIP, RuleType.FILE_NAME_SUFFIX, "_프로젝트.zip"),
+                                        tuple(FileType.ZIP, RuleType.ZIP_REQUIRED_PATH, "src/main/resources/data.sql")));
+
+        mockMvc.perform(get("/api/assignments").with(signedIn()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2));
+    }
 }
