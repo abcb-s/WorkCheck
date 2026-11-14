@@ -39,11 +39,11 @@ class AssignmentServiceImplTest {
     private AssignmentServiceImpl assignmentService;
 
     @Test
-    void createAssignment_savesTitleAndConnectsRules() {
+    void createAssignment_stripsValuesAndConnectsRules() {
         AssignmentRequest request = new AssignmentRequest("  과학 탐구 보고서  ", List.of(
-                new CheckRuleRequest(FileType.PDF, RuleType.FILE_NAME_SUFFIX, "_보고서.pdf"),
-                new CheckRuleRequest(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌"),
-                new CheckRuleRequest(FileType.ZIP, RuleType.ZIP_REQUIRED_PATH, "data.sql")
+                new CheckRuleRequest(FileType.PDF, RuleType.FILE_NAME_SUFFIX, "  _보고서.pdf  "),
+                new CheckRuleRequest(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "  참고 문헌  "),
+                new CheckRuleRequest(FileType.ZIP, RuleType.ZIP_REQUIRED_PATH, "  data.sql  ")
         ));
         given(assignmentRepository.save(any(Assignment.class))).willAnswer(invocation -> {
             Assignment assignment = invocation.getArgument(0);
@@ -57,7 +57,7 @@ class AssignmentServiceImplTest {
 
         assertThat(response.title()).isEqualTo("과학 탐구 보고서");
         assertThat(response.rules()).extracting("value")
-                .containsExactly("_보고서.pdf", "참고문헌", "data.sql");
+                .containsExactly("_보고서.pdf", "참고 문헌", "data.sql");
     }
 
     @ParameterizedTest
@@ -136,7 +136,7 @@ class AssignmentServiceImplTest {
             "ZIP, ZIP_REQUIRED_PATH, src/main/resources/data.sql",
             "PDF, PDF_REQUIRED_TEXT, 참고 문헌"
     })
-    void updateAssignment_replacesRulesAndKeepsCollection(FileType fileType, RuleType type, String value) {
+    void updateAssignment_stripsValueAndReplacesRules(FileType fileType, RuleType type, String value) {
         Assignment assignment = Assignment.builder().id(1L).title("기존 과제").build();
         CheckRule originalRule = CheckRule.builder().id(10L).fileType(FileType.PDF)
                 .type(RuleType.PDF_REQUIRED_TEXT).value("참고문헌").build();
@@ -145,7 +145,7 @@ class AssignmentServiceImplTest {
         given(assignmentRepository.findByIdWithRules(1L)).willReturn(Optional.of(assignment));
         given(assignmentRepository.saveAndFlush(assignment)).willReturn(assignment);
         AssignmentRequest request = new AssignmentRequest("  수정한 과제  ", List.of(
-                new CheckRuleRequest(fileType, type, value)
+                new CheckRuleRequest(fileType, type, "  " + value + "  ")
         ));
 
         AssignmentResponse response = assignmentService.updateAssignment(1L, request);

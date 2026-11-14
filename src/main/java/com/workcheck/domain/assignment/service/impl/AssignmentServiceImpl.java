@@ -82,7 +82,7 @@ public class AssignmentServiceImpl implements AssignmentService {
             rules.add(CheckRule.builder()
                     .fileType(rule.fileType())
                     .type(rule.type())
-                    .value(rule.value())
+                    .value(rule.value().strip())
                     .build());
         }
 
