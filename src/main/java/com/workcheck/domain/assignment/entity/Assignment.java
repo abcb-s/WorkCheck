@@ -48,7 +48,11 @@ public class Assignment extends BaseTimeEntity {
         this.title = title;
     }
 
-    public void clearRules() {
+    public void replaceRules(List<CheckRule> newRules) {
         rules.clear();
+
+        for (CheckRule rule : newRules) {
+            addRule(rule);
+        }
     }
 }

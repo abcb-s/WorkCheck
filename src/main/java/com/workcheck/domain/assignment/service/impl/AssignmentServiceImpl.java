@@ -11,6 +11,7 @@ import com.workcheck.global.data.FileType;
 import com.workcheck.global.data.RuleType;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,21 +26,13 @@ public class AssignmentServiceImpl implements AssignmentService {
 
     @Override
     public AssignmentResponse createAssignment(AssignmentRequest request) {
-        for (CheckRuleRequest rule : request.rules()) {
-            validateRule(rule);
-        }
+        List<CheckRule> rules = createRules(request.rules());
 
         Assignment assignment = Assignment.builder()
                 .title(request.title().strip())
                 .build();
 
-        for (CheckRuleRequest rule : request.rules()) {
-            assignment.addRule(CheckRule.builder()
-                    .fileType(rule.fileType())
-                    .type(rule.type())
-                    .value(rule.value())
-                    .build());
-        }
+        assignment.replaceRules(rules);
 
         return AssignmentResponse.from(assignmentRepository.save(assignment));
     }
@@ -65,20 +58,10 @@ public class AssignmentServiceImpl implements AssignmentService {
         Assignment assignment = assignmentRepository.findByIdWithRules(assignmentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND));
 
-        for (CheckRuleRequest rule : request.rules()) {
-            validateRule(rule);
-        }
+        List<CheckRule> rules = createRules(request.rules());
 
         assignment.updateTitle(request.title().strip());
-        assignment.clearRules();
-
-        for (CheckRuleRequest rule : request.rules()) {
-            assignment.addRule(CheckRule.builder()
-                    .fileType(rule.fileType())
-                    .type(rule.type())
-                    .value(rule.value())
-                    .build());
-        }
+        assignment.replaceRules(rules);
 
         return AssignmentResponse.from(assignmentRepository.saveAndFlush(assignment));
     }
@@ -89,6 +72,21 @@ public class AssignmentServiceImpl implements AssignmentService {
                 .orElseThrow(() -> new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND));
 
         assignmentRepository.delete(assignment);
+    }
+
+    private List<CheckRule> createRules(List<CheckRuleRequest> requests) {
+        List<CheckRule> rules = new ArrayList<>();
+
+        for (CheckRuleRequest rule : requests) {
+            validateRule(rule);
+            rules.add(CheckRule.builder()
+                    .fileType(rule.fileType())
+                    .type(rule.type())
+                    .value(rule.value())
+                    .build());
+        }
+
+        return rules;
     }
 
     private void validateRule(CheckRuleRequest rule) {
