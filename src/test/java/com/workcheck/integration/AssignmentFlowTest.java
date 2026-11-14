@@ -14,6 +14,7 @@ import com.workcheck.domain.assignment.repository.AssignmentRepository;
 import com.workcheck.domain.assignment.repository.CheckRuleRepository;
 import com.workcheck.domain.assignment.entity.CheckRule;
 import com.workcheck.domain.assignment.entity.Assignment;
+import com.workcheck.domain.member.repository.MemberRepository;
 import com.workcheck.global.data.FileType;
 import com.workcheck.global.data.RuleType;
 import jakarta.persistence.EntityManager;
@@ -68,8 +69,12 @@ class AssignmentFlowTest {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private MemberRepository memberRepository;
+
     private MockHttpSession session;
     private Cookie xsrf;
+    private Long memberId;
 
     @BeforeEach
     void signin() throws Exception {
@@ -84,6 +89,7 @@ class AssignmentFlowTest {
                                 {"email":"demo@workcheck.com","password":"password1234"}
                                 """))
                 .andExpect(status().isOk()).andReturn();
+        memberId = jsonMapper.readTree(result.getResponse().getContentAsString()).get("data").get("id").asLong();
         session = (MockHttpSession) result.getRequest().getSession(false);
         assertThat(session).isNotNull();
     }
@@ -150,6 +156,7 @@ class AssignmentFlowTest {
         entityManager.clear();
 
         assertThat(assignmentRepository.findById(assignmentId)).isEmpty();
+        assertThat(memberRepository.findById(memberId)).isPresent();
         assertThat(checkRuleRepository.findById(newRuleId)).isEmpty();
         mockMvc.perform(get("/api/assignments/" + assignmentId).with(signedIn()))
                 .andExpect(status().isNotFound())
@@ -241,6 +248,7 @@ class AssignmentFlowTest {
         entityManager.flush();
         entityManager.clear();
         Assignment persisted = assignmentRepository.findByIdWithRules(assignmentId).orElseThrow();
+        assertThat(persisted.getMember().getId()).isEqualTo(memberId);
         assertThat(persisted.getRules()).extracting(CheckRule::getFileType, CheckRule::getValue)
                 .containsExactly(tuple(FileType.ZIP, "src/main/resources/data.sql"),
                         tuple(FileType.PDF, "참고문헌"));
@@ -271,6 +279,8 @@ class AssignmentFlowTest {
     void demoAssignments_loadPdfAndZipRules() throws Exception {
         List<Assignment> assignments = assignmentRepository.findAllWithRules();
 
+        assertThat(assignments).allSatisfy(assignment ->
+                assertThat(assignment.getMember().getId()).isEqualTo(memberId));
         assertThat(assignments).filteredOn("title", "과학 탐구 보고서")
                 .singleElement().satisfies(assignment ->
                         assertThat(assignment.getRules())

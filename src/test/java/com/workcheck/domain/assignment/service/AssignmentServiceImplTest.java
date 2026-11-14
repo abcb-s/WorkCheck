@@ -15,6 +15,8 @@ import com.workcheck.domain.assignment.entity.Assignment;
 import com.workcheck.domain.assignment.entity.CheckRule;
 import com.workcheck.domain.assignment.repository.AssignmentRepository;
 import com.workcheck.domain.assignment.service.impl.AssignmentServiceImpl;
+import com.workcheck.domain.member.entity.Member;
+import com.workcheck.domain.member.repository.MemberRepository;
 import com.workcheck.global.data.FileType;
 import com.workcheck.global.data.RuleType;
 import com.workcheck.global.exception.exception.CustomException;
@@ -32,8 +34,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class AssignmentServiceImplTest {
 
+    private static final Member MEMBER = Member.builder().id(1L).email("owner@workcheck.com").name("소유자").build();
+
     @Mock
     private AssignmentRepository assignmentRepository;
+
+    @Mock
+    private MemberRepository memberRepository;
 
     @InjectMocks
     private AssignmentServiceImpl assignmentService;
@@ -45,15 +52,17 @@ class AssignmentServiceImplTest {
                 new CheckRuleRequest(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "  참고 문헌  "),
                 new CheckRuleRequest(FileType.ZIP, RuleType.ZIP_REQUIRED_PATH, "  data.sql  ")
         ));
+        given(memberRepository.findById(1L)).willReturn(Optional.of(MEMBER));
         given(assignmentRepository.save(any(Assignment.class))).willAnswer(invocation -> {
             Assignment assignment = invocation.getArgument(0);
+            assertThat(assignment.getMember()).isSameAs(MEMBER);
             assertThat(assignment.getRules()).hasSize(3);
             assertThat(assignment.getRules()).allSatisfy(rule ->
                     assertThat(rule.getAssignment()).isSameAs(assignment));
             return assignment;
         });
 
-        AssignmentResponse response = assignmentService.createAssignment(request);
+        AssignmentResponse response = assignmentService.createAssignment(1L, request);
 
         assertThat(response.title()).isEqualTo("과학 탐구 보고서");
         assertThat(response.rules()).extracting("value")
@@ -68,9 +77,23 @@ class AssignmentServiceImplTest {
                 new CheckRuleRequest(fileType, type, "필수값")
         ));
 
-        assertThatThrownBy(() -> assignmentService.createAssignment(request))
+        assertThatThrownBy(() -> assignmentService.createAssignment(1L, request))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.INVALID_RULE_COMBINATION);
+
+        verifyNoInteractions(assignmentRepository);
+    }
+
+    @Test
+    void createAssignment_missingMember_doesNotSave() {
+        given(memberRepository.findById(1L)).willReturn(Optional.empty());
+        AssignmentRequest request = new AssignmentRequest("과제", List.of(
+                new CheckRuleRequest(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌")
+        ));
+
+        assertThatThrownBy(() -> assignmentService.createAssignment(1L, request))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
 
         verifyNoInteractions(assignmentRepository);
     }
@@ -84,7 +107,7 @@ class AssignmentServiceImplTest {
 
     @Test
     void getAssignment_mapsRulesToResponse() {
-        Assignment assignment = Assignment.builder().id(1L).title("자바 프로젝트").build();
+        Assignment assignment = Assignment.builder().id(1L).title("자바 프로젝트").member(MEMBER).build();
         assignment.addRule(CheckRule.builder().id(10L).fileType(FileType.ZIP)
                 .type(RuleType.ZIP_REQUIRED_PATH).value("data.sql").build());
         given(assignmentRepository.findByIdWithRules(1L)).willReturn(Optional.of(assignment));
@@ -110,7 +133,7 @@ class AssignmentServiceImplTest {
     @ParameterizedTest
     @CsvSource({"ZIP, PDF_REQUIRED_TEXT", "PDF, ZIP_REQUIRED_PATH"})
     void updateAssignment_wrongRuleCombination_keepsTitleAndRules(FileType fileType, RuleType type) {
-        Assignment assignment = Assignment.builder().id(1L).title("기존 과제").build();
+        Assignment assignment = Assignment.builder().id(1L).title("기존 과제").member(MEMBER).build();
         CheckRule originalRule = CheckRule.builder().id(10L).fileType(FileType.PDF)
                 .type(RuleType.PDF_REQUIRED_TEXT).value("참고문헌").build();
         assignment.addRule(originalRule);
@@ -137,7 +160,7 @@ class AssignmentServiceImplTest {
             "PDF, PDF_REQUIRED_TEXT, 참고 문헌"
     })
     void updateAssignment_stripsValueAndReplacesRules(FileType fileType, RuleType type, String value) {
-        Assignment assignment = Assignment.builder().id(1L).title("기존 과제").build();
+        Assignment assignment = Assignment.builder().id(1L).title("기존 과제").member(MEMBER).build();
         CheckRule originalRule = CheckRule.builder().id(10L).fileType(FileType.PDF)
                 .type(RuleType.PDF_REQUIRED_TEXT).value("참고문헌").build();
         assignment.addRule(originalRule);
@@ -184,4 +207,5 @@ class AssignmentServiceImplTest {
 
         verify(assignmentRepository, never()).delete(any(Assignment.class));
     }
+
 }

@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.workcheck.domain.assignment.entity.Assignment;
 import com.workcheck.domain.assignment.entity.CheckRule;
+import com.workcheck.domain.member.entity.Member;
+import com.workcheck.domain.member.repository.MemberRepository;
 import com.workcheck.global.data.FileType;
 import com.workcheck.global.data.RuleType;
 import jakarta.persistence.EntityManager;
@@ -20,6 +22,9 @@ class AssignmentRepositoryTest {
     private AssignmentRepository assignmentRepository;
 
     @Autowired
+    private MemberRepository memberRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     private CheckRule rule(FileType fileType, RuleType type, String value) {
@@ -28,7 +33,9 @@ class AssignmentRepositoryTest {
 
     @Test
     void save_persistsRulesAndAuditTimestamps() {
-        Assignment assignment = Assignment.builder().title("과학 탐구 보고서").build();
+        Member member = memberRepository.save(Member.builder().email("owner@workcheck.com")
+                .password("hash").name("소유자").build());
+        Assignment assignment = Assignment.builder().title("과학 탐구 보고서").member(member).build();
         assignment.addRule(rule(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌"));
         assignmentRepository.saveAndFlush(assignment);
         entityManager.clear();
@@ -36,6 +43,7 @@ class AssignmentRepositoryTest {
         Assignment found = assignmentRepository.findByIdWithRules(assignment.getId()).orElseThrow();
 
         assertThat(found.getCreatedAt()).isNotNull();
+        assertThat(found.getMember().getId()).isEqualTo(member.getId());
         assertThat(found.getRules()).singleElement().satisfies(rule -> {
             assertThat(rule.getId()).isNotNull();
             assertThat(rule.getCreatedAt()).isNotNull();
@@ -45,12 +53,14 @@ class AssignmentRepositoryTest {
 
     @Test
     void findAllWithRules_fetchesRulesWithoutDuplicateAssignments() {
-        Assignment first = Assignment.builder().title("첫 과제").build();
+        Member member = memberRepository.save(Member.builder().email("owner@workcheck.com")
+                .password("hash").name("소유자").build());
+        Assignment first = Assignment.builder().title("첫 과제").member(member).build();
         first.addRule(rule(FileType.PDF, RuleType.FILE_NAME_SUFFIX, "_보고서.pdf"));
         first.addRule(rule(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌"));
         assignmentRepository.saveAndFlush(first);
 
-        Assignment second = Assignment.builder().title("두 번째 과제").build();
+        Assignment second = Assignment.builder().title("두 번째 과제").member(member).build();
         second.addRule(rule(FileType.ZIP, RuleType.ZIP_REQUIRED_PATH, "data.sql"));
         assignmentRepository.saveAndFlush(second);
         entityManager.clear();
