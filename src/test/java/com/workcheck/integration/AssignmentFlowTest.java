@@ -95,10 +95,14 @@ class AssignmentFlowTest {
     }
 
     private RequestPostProcessor signedIn() {
+        return signedIn(session, xsrf);
+    }
+
+    private RequestPostProcessor signedIn(MockHttpSession memberSession, Cookie token) {
         return request -> {
-            request.setSession(session);
-            request.setCookies(xsrf);
-            request.addHeader("X-XSRF-TOKEN", xsrf.getValue());
+            request.setSession(memberSession);
+            request.setCookies(token);
+            request.addHeader("X-XSRF-TOKEN", token.getValue());
             return request;
         };
     }
@@ -273,6 +277,93 @@ class AssignmentFlowTest {
                 .andExpect(jsonPath("$.error.message").value("파일 형식과 검사 규칙 종류가 일치하지 않습니다."));
 
         assertThat(assignmentRepository.count()).isEqualTo(before);
+    }
+
+    @Test
+    void assignments_areIsolatedBetweenSignedInMembers() throws Exception {
+        MvcResult created = mockMvc.perform(post("/api/assignments").with(signedIn())
+                        .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
+                .andExpect(status().isCreated()).andReturn();
+        var original = jsonMapper.readTree(created.getResponse().getContentAsString()).get("data");
+        long assignmentId = original.get("id").asLong();
+
+        MvcResult csrfResult = mockMvc.perform(get("/api/members/csrf"))
+                .andExpect(status().isNoContent()).andReturn();
+        Cookie otherXsrf = csrfResult.getResponse().getCookie("XSRF-TOKEN");
+        assertThat(otherXsrf).isNotNull();
+        MvcResult signup = mockMvc.perform(post("/api/members")
+                        .cookie(otherXsrf).header("X-XSRF-TOKEN", otherXsrf.getValue())
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                                {"email":"other.assignment@workcheck.com","password":"password1234","name":"다른 회원"}
+                                """))
+                .andExpect(status().isCreated()).andReturn();
+        long otherMemberId = jsonMapper.readTree(signup.getResponse().getContentAsString())
+                .get("data").get("id").asLong();
+        MvcResult signin = mockMvc.perform(post("/api/members/signin")
+                        .cookie(otherXsrf).header("X-XSRF-TOKEN", otherXsrf.getValue())
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                                {"email":"other.assignment@workcheck.com","password":"password1234"}
+                                """))
+                .andExpect(status().isOk()).andReturn();
+        MockHttpSession otherSession = (MockHttpSession) signin.getRequest().getSession(false);
+        assertThat(otherSession).isNotNull();
+
+        mockMvc.perform(get("/api/assignments").with(signedIn(otherSession, otherXsrf)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isEmpty());
+        MvcResult otherCreated = mockMvc.perform(post("/api/assignments")
+                        .with(signedIn(otherSession, otherXsrf))
+                        .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
+                .andExpect(status().isCreated()).andReturn();
+        var otherAssignment = jsonMapper.readTree(otherCreated.getResponse().getContentAsString()).get("data");
+        long otherAssignmentId = otherAssignment.get("id").asLong();
+
+        mockMvc.perform(get("/api/assignments").with(signedIn()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.id == " + assignmentId + ")]").isNotEmpty())
+                .andExpect(jsonPath("$.data[?(@.id == " + otherAssignmentId + ")]").isEmpty());
+        mockMvc.perform(get("/api/assignments").with(signedIn(otherSession, otherXsrf)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].id").value(otherAssignmentId));
+
+        MvcResult hidden = mockMvc.perform(get("/api/assignments/" + assignmentId)
+                        .with(signedIn(otherSession, otherXsrf)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND")).andReturn();
+        MvcResult missing = mockMvc.perform(get("/api/assignments/" + Long.MAX_VALUE)
+                        .with(signedIn(otherSession, otherXsrf)))
+                .andExpect(status().isNotFound()).andReturn();
+        assertThat(hidden.getResponse().getContentAsString())
+                .isEqualTo(missing.getResponse().getContentAsString());
+        mockMvc.perform(put("/api/assignments/" + assignmentId).with(signedIn(otherSession, otherXsrf))
+                        .contentType(MediaType.APPLICATION_JSON).content(REQUEST.replace("처음 과제", "수정 시도")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND"));
+        mockMvc.perform(delete("/api/assignments/" + assignmentId).with(signedIn(otherSession, otherXsrf)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND"));
+        entityManager.flush();
+        entityManager.clear();
+
+        MvcResult unchanged = mockMvc.perform(get("/api/assignments/" + assignmentId).with(signedIn()))
+                .andExpect(status().isOk()).andReturn();
+        assertThat(jsonMapper.readTree(unchanged.getResponse().getContentAsString()).get("data"))
+                .isEqualTo(original);
+        Assignment otherPersisted = assignmentRepository.findByIdWithRules(otherAssignmentId, otherMemberId)
+                .orElseThrow();
+        assertThat(otherPersisted.getMember().getId()).isEqualTo(otherMemberId);
+        List<Long> otherRuleIds = otherPersisted.getRules().stream().map(CheckRule::getId).toList();
+
+        mockMvc.perform(delete("/api/assignments/" + otherAssignmentId).with(signedIn(otherSession, otherXsrf)))
+                .andExpect(status().isNoContent());
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(assignmentRepository.findById(otherAssignmentId)).isEmpty();
+        assertThat(checkRuleRepository.findAllById(otherRuleIds)).isEmpty();
+        assertThat(memberRepository.findById(otherMemberId)).isPresent();
+        assertThat(assignmentRepository.findByIdWithRules(assignmentId, memberId)).isPresent();
     }
 
     @Test
