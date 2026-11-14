@@ -40,7 +40,7 @@ class AssignmentRepositoryTest {
         assignmentRepository.saveAndFlush(assignment);
         entityManager.clear();
 
-        Assignment found = assignmentRepository.findByIdWithRules(assignment.getId()).orElseThrow();
+        Assignment found = assignmentRepository.findByIdWithRules(assignment.getId(), member.getId()).orElseThrow();
 
         assertThat(found.getCreatedAt()).isNotNull();
         assertThat(found.getMember().getId()).isEqualTo(member.getId());
@@ -65,14 +65,32 @@ class AssignmentRepositoryTest {
         assignmentRepository.saveAndFlush(second);
         entityManager.clear();
 
-        List<Assignment> found = assignmentRepository.findAllWithRules();
+        List<Assignment> found = assignmentRepository.findAllWithRules(member.getId());
         assertThat(found).allSatisfy(assignment ->
                 assertThat(Hibernate.isInitialized(assignment.getRules())).isTrue());
         entityManager.clear();
 
-        assertThat(found).extracting(Assignment::getId).startsWith(second.getId(), first.getId()).doesNotHaveDuplicates();
+        assertThat(found).extracting(Assignment::getId).containsExactly(second.getId(), first.getId());
         assertThat(found.get(1).getRules()).extracting(CheckRule::getValue)
                 .containsExactly("_보고서.pdf", "참고문헌");
+    }
+
+    @Test
+    void findWithRules_filtersByMemberAndHidesOtherMembersAssignments() {
+        Member owner = memberRepository.save(Member.builder().email("owner@workcheck.com")
+                .password("hash").name("소유자").build());
+        Member other = memberRepository.save(Member.builder().email("other@workcheck.com")
+                .password("hash").name("다른 회원").build());
+        Assignment assignment = Assignment.builder().title("개인 과제").member(owner).build();
+        assignment.addRule(rule(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌"));
+        assignmentRepository.saveAndFlush(assignment);
+        entityManager.clear();
+
+        assertThat(assignmentRepository.findAllWithRules(owner.getId()))
+                .extracting(Assignment::getId).containsExactly(assignment.getId());
+        assertThat(assignmentRepository.findAllWithRules(other.getId())).isEmpty();
+        assertThat(assignmentRepository.findByIdWithRules(assignment.getId(), owner.getId())).isPresent();
+        assertThat(assignmentRepository.findByIdWithRules(assignment.getId(), other.getId())).isEmpty();
     }
 
 }

@@ -45,23 +45,23 @@ public class AssignmentServiceImpl implements AssignmentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AssignmentResponse> getAssignments() {
-        return assignmentRepository.findAllWithRules().stream()
+    public List<AssignmentResponse> getAssignments(Long memberId) {
+        return assignmentRepository.findAllWithRules(memberId).stream()
                 .map(AssignmentResponse::from)
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public AssignmentResponse getAssignment(Long assignmentId) {
-        Assignment assignment = assignmentRepository.findByIdWithRules(assignmentId)
+    public AssignmentResponse getAssignment(Long memberId, Long assignmentId) {
+        Assignment assignment = assignmentRepository.findByIdWithRules(assignmentId, memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND));
         return AssignmentResponse.from(assignment);
     }
 
     @Override
-    public AssignmentResponse updateAssignment(Long assignmentId, AssignmentRequest request) {
-        Assignment assignment = assignmentRepository.findByIdWithRules(assignmentId)
+    public AssignmentResponse updateAssignment(Long memberId, Long assignmentId, AssignmentRequest request) {
+        Assignment assignment = assignmentRepository.findByIdWithRules(assignmentId, memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND));
 
         List<CheckRule> rules = createRules(request.rules());
@@ -73,8 +73,8 @@ public class AssignmentServiceImpl implements AssignmentService {
     }
 
     @Override
-    public void deleteAssignment(Long assignmentId) {
-        Assignment assignment = assignmentRepository.findByIdWithRules(assignmentId)
+    public void deleteAssignment(Long memberId, Long assignmentId) {
+        Assignment assignment = assignmentRepository.findByIdWithRules(assignmentId, memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND));
 
         assignmentRepository.delete(assignment);
