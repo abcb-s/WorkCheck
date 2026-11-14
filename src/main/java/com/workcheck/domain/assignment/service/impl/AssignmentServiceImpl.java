@@ -91,10 +91,10 @@ public class AssignmentServiceImpl implements AssignmentService {
 
     private void validateRule(CheckRuleRequest rule) {
         if (rule.fileType() == FileType.ZIP && rule.type() == RuleType.PDF_REQUIRED_TEXT) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
+            throw new CustomException(ErrorCode.INVALID_RULE_COMBINATION);
         }
         if (rule.fileType() == FileType.PDF && rule.type() == RuleType.ZIP_REQUIRED_PATH) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
+            throw new CustomException(ErrorCode.INVALID_RULE_COMBINATION);
         }
     }
 }
