@@ -129,6 +129,37 @@ class AssignmentServiceImplTest {
         verify(assignmentRepository, never()).saveAndFlush(any());
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "ZIP, FILE_NAME_SUFFIX, _프로젝트.zip",
+            "PDF, FILE_NAME_SUFFIX, _보고서.pdf",
+            "ZIP, ZIP_REQUIRED_PATH, src/main/resources/data.sql",
+            "PDF, PDF_REQUIRED_TEXT, 참고 문헌"
+    })
+    void updateAssignment_replacesRulesAndKeepsCollection(FileType fileType, RuleType type, String value) {
+        Assignment assignment = Assignment.builder().id(1L).title("기존 과제").build();
+        CheckRule originalRule = CheckRule.builder().id(10L).fileType(FileType.PDF)
+                .type(RuleType.PDF_REQUIRED_TEXT).value("참고문헌").build();
+        assignment.addRule(originalRule);
+        List<CheckRule> originalRules = assignment.getRules();
+        given(assignmentRepository.findByIdWithRules(1L)).willReturn(Optional.of(assignment));
+        given(assignmentRepository.saveAndFlush(assignment)).willReturn(assignment);
+        AssignmentRequest request = new AssignmentRequest("  수정한 과제  ", List.of(
+                new CheckRuleRequest(fileType, type, value)
+        ));
+
+        AssignmentResponse response = assignmentService.updateAssignment(1L, request);
+
+        assertThat(response.title()).isEqualTo("수정한 과제");
+        assertThat(response.rules()).extracting("value").containsExactly(value);
+        assertThat(assignment.getRules()).isSameAs(originalRules).doesNotContain(originalRule);
+        assertThat(assignment.getRules()).singleElement().satisfies(rule -> {
+            assertThat(rule.getFileType()).isEqualTo(fileType);
+            assertThat(rule.getType()).isEqualTo(type);
+            assertThat(rule.getAssignment()).isSameAs(assignment);
+        });
+    }
+
     @Test
     void updateAssignment_notFound_throws() {
         given(assignmentRepository.findByIdWithRules(99L)).willReturn(Optional.empty());
