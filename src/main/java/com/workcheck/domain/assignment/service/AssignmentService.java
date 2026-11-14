@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface AssignmentService {
 
-    AssignmentResponse createAssignment(AssignmentRequest request);
+    AssignmentResponse createAssignment(Long memberId, AssignmentRequest request);
 
     List<AssignmentResponse> getAssignments();
 

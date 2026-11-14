@@ -7,7 +7,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -34,6 +34,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -41,6 +43,10 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import(SecurityConfig.class)
 @MockitoBean(types = JpaMetamodelMappingContext.class)
 class AssignmentControllerTest {
+
+    private static final UsernamePasswordAuthenticationToken AUTHENTICATION =
+            UsernamePasswordAuthenticationToken.authenticated(1L, null,
+                    List.of(new SimpleGrantedAuthority("ROLE_USER")));
 
     private static final String REQUEST = """
             {
@@ -64,9 +70,9 @@ class AssignmentControllerTest {
 
     @Test
     void createAssignment_returns201() throws Exception {
-        given(assignmentService.createAssignment(any())).willReturn(ASSIGNMENT);
+        given(assignmentService.createAssignment(eq(1L), any())).willReturn(ASSIGNMENT);
 
-        mockMvc.perform(post("/api/assignments").with(user("student")).with(csrf())
+        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.id").value(1))
@@ -87,12 +93,12 @@ class AssignmentControllerTest {
             "{\"title\":\"보고서\",\"rules\":[{\"fileType\":\"TXT\",\"type\":\"PDF_REQUIRED_TEXT\",\"value\":\"참고문헌\"}]}"
     })
     void createAndUpdateAssignment_invalidInput_returns400(String request) throws Exception {
-        mockMvc.perform(post("/api/assignments").with(user("student")).with(csrf())
+        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
 
-        mockMvc.perform(put("/api/assignments/1").with(user("student")).with(csrf())
+        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
@@ -104,12 +110,12 @@ class AssignmentControllerTest {
     void createAndUpdateAssignment_longTitle_returns400() throws Exception {
         String request = REQUEST.replace("과학 탐구 보고서", "가".repeat(101));
 
-        mockMvc.perform(post("/api/assignments").with(user("student")).with(csrf())
+        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
 
-        mockMvc.perform(put("/api/assignments/1").with(user("student")).with(csrf())
+        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
@@ -121,12 +127,12 @@ class AssignmentControllerTest {
     void createAndUpdateAssignment_longRuleValue_returns400() throws Exception {
         String request = REQUEST.replace("참고문헌", "가".repeat(501));
 
-        mockMvc.perform(post("/api/assignments").with(user("student")).with(csrf())
+        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
 
-        mockMvc.perform(put("/api/assignments/1").with(user("student")).with(csrf())
+        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
@@ -138,7 +144,7 @@ class AssignmentControllerTest {
     void getAssignments_returnsList() throws Exception {
         given(assignmentService.getAssignments()).willReturn(List.of(ASSIGNMENT));
 
-        mockMvc.perform(get("/api/assignments").with(user("student")))
+        mockMvc.perform(get("/api/assignments").with(authentication(AUTHENTICATION)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].title").value("과학 탐구 보고서"));
     }
@@ -147,7 +153,7 @@ class AssignmentControllerTest {
     void getAssignment_returnsRules() throws Exception {
         given(assignmentService.getAssignment(1L)).willReturn(ASSIGNMENT);
 
-        mockMvc.perform(get("/api/assignments/1").with(user("student")))
+        mockMvc.perform(get("/api/assignments/1").with(authentication(AUTHENTICATION)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.rules[0].value").value("참고문헌"));
     }
@@ -157,7 +163,7 @@ class AssignmentControllerTest {
         given(assignmentService.getAssignment(99L))
                 .willThrow(new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND));
 
-        mockMvc.perform(get("/api/assignments/99").with(user("student")))
+        mockMvc.perform(get("/api/assignments/99").with(authentication(AUTHENTICATION)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND"));
     }
@@ -172,7 +178,7 @@ class AssignmentControllerTest {
 
     @Test
     void createAssignment_withoutCsrf_returns403() throws Exception {
-        mockMvc.perform(post("/api/assignments").with(user("student"))
+        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION))
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("INVALID_CSRF"));
@@ -184,7 +190,7 @@ class AssignmentControllerTest {
     void updateAssignment_returns200() throws Exception {
         given(assignmentService.updateAssignment(eq(1L), any())).willReturn(ASSIGNMENT);
 
-        mockMvc.perform(put("/api/assignments/1").with(user("student")).with(csrf())
+        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(1))
@@ -198,18 +204,18 @@ class AssignmentControllerTest {
         doThrow(new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND))
                 .when(assignmentService).deleteAssignment(99L);
 
-        mockMvc.perform(put("/api/assignments/99").with(user("student")).with(csrf())
+        mockMvc.perform(put("/api/assignments/99").with(authentication(AUTHENTICATION)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND"));
-        mockMvc.perform(delete("/api/assignments/99").with(user("student")).with(csrf()))
+        mockMvc.perform(delete("/api/assignments/99").with(authentication(AUTHENTICATION)).with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND"));
     }
 
     @Test
     void deleteAssignment_returns204WithoutBody() throws Exception {
-        mockMvc.perform(delete("/api/assignments/1").with(user("student")).with(csrf()))
+        mockMvc.perform(delete("/api/assignments/1").with(authentication(AUTHENTICATION)).with(csrf()))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
@@ -229,11 +235,11 @@ class AssignmentControllerTest {
 
     @Test
     void updateAndDeleteAssignment_withoutCsrf_returns403() throws Exception {
-        mockMvc.perform(put("/api/assignments/1").with(user("student"))
+        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION))
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("INVALID_CSRF"));
-        mockMvc.perform(delete("/api/assignments/1").with(user("student")))
+        mockMvc.perform(delete("/api/assignments/1").with(authentication(AUTHENTICATION)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("INVALID_CSRF"));
 

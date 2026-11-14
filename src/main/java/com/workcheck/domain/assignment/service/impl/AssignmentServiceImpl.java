@@ -7,6 +7,8 @@ import com.workcheck.domain.assignment.entity.Assignment;
 import com.workcheck.domain.assignment.entity.CheckRule;
 import com.workcheck.domain.assignment.repository.AssignmentRepository;
 import com.workcheck.domain.assignment.service.AssignmentService;
+import com.workcheck.domain.member.entity.Member;
+import com.workcheck.domain.member.repository.MemberRepository;
 import com.workcheck.global.data.FileType;
 import com.workcheck.global.data.RuleType;
 import com.workcheck.global.exception.exception.CustomException;
@@ -23,13 +25,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class AssignmentServiceImpl implements AssignmentService {
 
     private final AssignmentRepository assignmentRepository;
+    private final MemberRepository memberRepository;
 
     @Override
-    public AssignmentResponse createAssignment(AssignmentRequest request) {
+    public AssignmentResponse createAssignment(Long memberId, AssignmentRequest request) {
         List<CheckRule> rules = createRules(request.rules());
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
         Assignment assignment = Assignment.builder()
                 .title(request.title().strip())
+                .member(member)
                 .build();
 
         assignment.replaceRules(rules);
