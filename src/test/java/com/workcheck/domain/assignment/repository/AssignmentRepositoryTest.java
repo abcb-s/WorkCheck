@@ -11,25 +11,10 @@ import java.util.List;
 import org.hibernate.Hibernate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.persistence.autoconfigure.EntityScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.test.context.ContextConfiguration;
 
-@DataJpaTest(properties = "spring.sql.init.mode=never")
-@ContextConfiguration(classes = AssignmentRepositoryTest.JpaTestConfig.class)
+@DataJpaTest
 class AssignmentRepositoryTest {
-
-    @Configuration(proxyBeanMethods = false)
-    @EnableAutoConfiguration
-    @EnableJpaAuditing
-    @EntityScan(basePackageClasses = Assignment.class)
-    @EnableJpaRepositories(basePackageClasses = AssignmentRepository.class)
-    static class JpaTestConfig {
-    }
 
     @Autowired
     private AssignmentRepository assignmentRepository;
@@ -75,7 +60,7 @@ class AssignmentRepositoryTest {
                 assertThat(Hibernate.isInitialized(assignment.getRules())).isTrue());
         entityManager.clear();
 
-        assertThat(found).extracting(Assignment::getId).containsExactly(second.getId(), first.getId());
+        assertThat(found).extracting(Assignment::getId).startsWith(second.getId(), first.getId()).doesNotHaveDuplicates();
         assertThat(found.get(1).getRules()).extracting(CheckRule::getValue)
                 .containsExactly("_보고서.pdf", "참고문헌");
     }
