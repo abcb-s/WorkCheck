@@ -190,7 +190,7 @@ class AssignmentFlowTest {
                 .andExpect(status().isCreated()).andReturn();
         var original = jsonMapper.readTree(created.getResponse().getContentAsString()).get("data");
         long assignmentId = original.get("id").asLong();
-        var originalRules = assignmentRepository.findByIdWithRules(assignmentId).orElseThrow().getRules();
+        var originalRules = assignmentRepository.findByIdWithRules(assignmentId, memberId).orElseThrow().getRules();
         List<Long> originalRuleIds = originalRules.stream().map(CheckRule::getId).toList();
 
         try {
@@ -204,7 +204,7 @@ class AssignmentFlowTest {
             assertThat(jsonMapper.readTree(found.getResponse().getContentAsString()).get("data"))
                     .isEqualTo(original);
 
-            var persisted = assignmentRepository.findByIdWithRules(assignmentId).orElseThrow();
+            var persisted = assignmentRepository.findByIdWithRules(assignmentId, memberId).orElseThrow();
             assertThat(persisted.getTitle()).isEqualTo("처음 과제");
             assertThat(persisted.getRules()).extracting(CheckRule::getId)
                     .containsExactlyElementsOf(originalRuleIds);
@@ -247,7 +247,7 @@ class AssignmentFlowTest {
 
         entityManager.flush();
         entityManager.clear();
-        Assignment persisted = assignmentRepository.findByIdWithRules(assignmentId).orElseThrow();
+        Assignment persisted = assignmentRepository.findByIdWithRules(assignmentId, memberId).orElseThrow();
         assertThat(persisted.getMember().getId()).isEqualTo(memberId);
         assertThat(persisted.getRules()).extracting(CheckRule::getFileType, CheckRule::getValue)
                 .containsExactly(tuple(FileType.ZIP, "src/main/resources/data.sql"),
@@ -277,7 +277,7 @@ class AssignmentFlowTest {
 
     @Test
     void demoAssignments_loadPdfAndZipRules() throws Exception {
-        List<Assignment> assignments = assignmentRepository.findAllWithRules();
+        List<Assignment> assignments = assignmentRepository.findAllWithRules(memberId);
 
         assertThat(assignments).allSatisfy(assignment ->
                 assertThat(assignment.getMember().getId()).isEqualTo(memberId));

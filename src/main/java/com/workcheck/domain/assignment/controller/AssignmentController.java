@@ -39,27 +39,29 @@ public class AssignmentController {
 
     @Operation(summary = "과제 목록 조회")
     @GetMapping
-    public ResponseEntity<BaseResponse<List<AssignmentResponse>>> getAssignments() {
-        return ResponseEntity.ok(BaseResponse.success(assignmentService.getAssignments()));
+    public ResponseEntity<BaseResponse<List<AssignmentResponse>>> getAssignments(@AuthenticationPrincipal Long memberId) {
+        return ResponseEntity.ok(BaseResponse.success(assignmentService.getAssignments(memberId)));
     }
 
     @Operation(summary = "과제와 검사 규칙 상세 조회")
     @GetMapping("/{assignmentId}")
-    public ResponseEntity<BaseResponse<AssignmentResponse>> getAssignment(@PathVariable Long assignmentId) {
-        return ResponseEntity.ok(BaseResponse.success(assignmentService.getAssignment(assignmentId)));
+    public ResponseEntity<BaseResponse<AssignmentResponse>> getAssignment(
+            @AuthenticationPrincipal Long memberId, @PathVariable Long assignmentId) {
+        return ResponseEntity.ok(BaseResponse.success(assignmentService.getAssignment(memberId, assignmentId)));
     }
 
     @Operation(summary = "과제와 검사 규칙 전체 수정")
     @PutMapping("/{assignmentId}")
     public ResponseEntity<BaseResponse<AssignmentResponse>> updateAssignment(
-            @PathVariable Long assignmentId, @Valid @RequestBody AssignmentRequest request) {
-        return ResponseEntity.ok(BaseResponse.success(assignmentService.updateAssignment(assignmentId, request)));
+            @AuthenticationPrincipal Long memberId, @PathVariable Long assignmentId,
+            @Valid @RequestBody AssignmentRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(assignmentService.updateAssignment(memberId, assignmentId, request)));
     }
 
     @Operation(summary = "과제와 검사 규칙 삭제")
     @DeleteMapping("/{assignmentId}")
-    public ResponseEntity<Void> deleteAssignment(@PathVariable Long assignmentId) {
-        assignmentService.deleteAssignment(assignmentId);
+    public ResponseEntity<Void> deleteAssignment(@AuthenticationPrincipal Long memberId, @PathVariable Long assignmentId) {
+        assignmentService.deleteAssignment(memberId, assignmentId);
         return ResponseEntity.noContent().build();
     }
 }

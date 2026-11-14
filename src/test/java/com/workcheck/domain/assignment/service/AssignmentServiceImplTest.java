@@ -100,9 +100,9 @@ class AssignmentServiceImplTest {
 
     @Test
     void getAssignments_returnsEmptyListWhenNoneExist() {
-        given(assignmentRepository.findAllWithRules()).willReturn(List.of());
+        given(assignmentRepository.findAllWithRules(1L)).willReturn(List.of());
 
-        assertThat(assignmentService.getAssignments()).isEmpty();
+        assertThat(assignmentService.getAssignments(1L)).isEmpty();
     }
 
     @Test
@@ -110,9 +110,9 @@ class AssignmentServiceImplTest {
         Assignment assignment = Assignment.builder().id(1L).title("자바 프로젝트").member(MEMBER).build();
         assignment.addRule(CheckRule.builder().id(10L).fileType(FileType.ZIP)
                 .type(RuleType.ZIP_REQUIRED_PATH).value("data.sql").build());
-        given(assignmentRepository.findByIdWithRules(1L)).willReturn(Optional.of(assignment));
+        given(assignmentRepository.findByIdWithRules(1L, 1L)).willReturn(Optional.of(assignment));
 
-        AssignmentResponse response = assignmentService.getAssignment(1L);
+        AssignmentResponse response = assignmentService.getAssignment(1L, 1L);
 
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.rules()).singleElement().satisfies(rule -> {
@@ -123,9 +123,9 @@ class AssignmentServiceImplTest {
 
     @Test
     void getAssignment_notFound_throws() {
-        given(assignmentRepository.findByIdWithRules(99L)).willReturn(Optional.empty());
+        given(assignmentRepository.findByIdWithRules(99L, 1L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> assignmentService.getAssignment(99L))
+        assertThatThrownBy(() -> assignmentService.getAssignment(1L, 99L))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.ASSIGNMENT_NOT_FOUND);
     }
@@ -137,13 +137,13 @@ class AssignmentServiceImplTest {
         CheckRule originalRule = CheckRule.builder().id(10L).fileType(FileType.PDF)
                 .type(RuleType.PDF_REQUIRED_TEXT).value("참고문헌").build();
         assignment.addRule(originalRule);
-        given(assignmentRepository.findByIdWithRules(1L)).willReturn(Optional.of(assignment));
+        given(assignmentRepository.findByIdWithRules(1L, 1L)).willReturn(Optional.of(assignment));
         AssignmentRequest request = new AssignmentRequest("수정한 과제", List.of(
                 new CheckRuleRequest(FileType.ZIP, RuleType.FILE_NAME_SUFFIX, ".zip"),
                 new CheckRuleRequest(fileType, type, "필수값")
         ));
 
-        assertThatThrownBy(() -> assignmentService.updateAssignment(1L, request))
+        assertThatThrownBy(() -> assignmentService.updateAssignment(1L, 1L, request))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.INVALID_RULE_COMBINATION);
 
@@ -165,13 +165,13 @@ class AssignmentServiceImplTest {
                 .type(RuleType.PDF_REQUIRED_TEXT).value("참고문헌").build();
         assignment.addRule(originalRule);
         List<CheckRule> originalRules = assignment.getRules();
-        given(assignmentRepository.findByIdWithRules(1L)).willReturn(Optional.of(assignment));
+        given(assignmentRepository.findByIdWithRules(1L, 1L)).willReturn(Optional.of(assignment));
         given(assignmentRepository.saveAndFlush(assignment)).willReturn(assignment);
         AssignmentRequest request = new AssignmentRequest("  수정한 과제  ", List.of(
                 new CheckRuleRequest(fileType, type, "  " + value + "  ")
         ));
 
-        AssignmentResponse response = assignmentService.updateAssignment(1L, request);
+        AssignmentResponse response = assignmentService.updateAssignment(1L, 1L, request);
 
         assertThat(response.title()).isEqualTo("수정한 과제");
         assertThat(response.rules()).extracting("value").containsExactly(value);
@@ -185,12 +185,12 @@ class AssignmentServiceImplTest {
 
     @Test
     void updateAssignment_notFound_throws() {
-        given(assignmentRepository.findByIdWithRules(99L)).willReturn(Optional.empty());
+        given(assignmentRepository.findByIdWithRules(99L, 1L)).willReturn(Optional.empty());
         AssignmentRequest request = new AssignmentRequest("과제", List.of(
                 new CheckRuleRequest(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌")
         ));
 
-        assertThatThrownBy(() -> assignmentService.updateAssignment(99L, request))
+        assertThatThrownBy(() -> assignmentService.updateAssignment(1L, 99L, request))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.ASSIGNMENT_NOT_FOUND);
 
@@ -199,13 +199,33 @@ class AssignmentServiceImplTest {
 
     @Test
     void deleteAssignment_notFound_throws() {
-        given(assignmentRepository.findByIdWithRules(99L)).willReturn(Optional.empty());
+        given(assignmentRepository.findByIdWithRules(99L, 1L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> assignmentService.deleteAssignment(99L))
+        assertThatThrownBy(() -> assignmentService.deleteAssignment(1L, 99L))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.ASSIGNMENT_NOT_FOUND);
 
         verify(assignmentRepository, never()).delete(any(Assignment.class));
     }
 
+    @Test
+    void accessOtherMembersAssignment_returnsNotFoundWithoutSavingOrDeleting() {
+        given(assignmentRepository.findByIdWithRules(1L, 2L)).willReturn(Optional.empty());
+        AssignmentRequest request = new AssignmentRequest("수정 시도", List.of(
+                new CheckRuleRequest(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "결론")
+        ));
+
+        assertThatThrownBy(() -> assignmentService.getAssignment(2L, 1L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.ASSIGNMENT_NOT_FOUND);
+        assertThatThrownBy(() -> assignmentService.updateAssignment(2L, 1L, request))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.ASSIGNMENT_NOT_FOUND);
+        assertThatThrownBy(() -> assignmentService.deleteAssignment(2L, 1L))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.ASSIGNMENT_NOT_FOUND);
+
+        verify(assignmentRepository, never()).saveAndFlush(any());
+        verify(assignmentRepository, never()).delete(any(Assignment.class));
+    }
 }

@@ -8,11 +8,11 @@ public interface AssignmentService {
 
     AssignmentResponse createAssignment(Long memberId, AssignmentRequest request);
 
-    List<AssignmentResponse> getAssignments();
+    List<AssignmentResponse> getAssignments(Long memberId);
 
-    AssignmentResponse getAssignment(Long assignmentId);
+    AssignmentResponse getAssignment(Long memberId, Long assignmentId);
 
-    AssignmentResponse updateAssignment(Long assignmentId, AssignmentRequest request);
+    AssignmentResponse updateAssignment(Long memberId, Long assignmentId, AssignmentRequest request);
 
-    void deleteAssignment(Long assignmentId);
+    void deleteAssignment(Long memberId, Long assignmentId);
 }

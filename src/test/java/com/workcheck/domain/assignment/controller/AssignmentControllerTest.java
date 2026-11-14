@@ -142,7 +142,7 @@ class AssignmentControllerTest {
 
     @Test
     void getAssignments_returnsList() throws Exception {
-        given(assignmentService.getAssignments()).willReturn(List.of(ASSIGNMENT));
+        given(assignmentService.getAssignments(1L)).willReturn(List.of(ASSIGNMENT));
 
         mockMvc.perform(get("/api/assignments").with(authentication(AUTHENTICATION)))
                 .andExpect(status().isOk())
@@ -151,7 +151,7 @@ class AssignmentControllerTest {
 
     @Test
     void getAssignment_returnsRules() throws Exception {
-        given(assignmentService.getAssignment(1L)).willReturn(ASSIGNMENT);
+        given(assignmentService.getAssignment(1L, 1L)).willReturn(ASSIGNMENT);
 
         mockMvc.perform(get("/api/assignments/1").with(authentication(AUTHENTICATION)))
                 .andExpect(status().isOk())
@@ -160,7 +160,7 @@ class AssignmentControllerTest {
 
     @Test
     void getAssignment_notFound_returns404() throws Exception {
-        given(assignmentService.getAssignment(99L))
+        given(assignmentService.getAssignment(1L, 99L))
                 .willThrow(new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND));
 
         mockMvc.perform(get("/api/assignments/99").with(authentication(AUTHENTICATION)))
@@ -188,7 +188,7 @@ class AssignmentControllerTest {
 
     @Test
     void updateAssignment_returns200() throws Exception {
-        given(assignmentService.updateAssignment(eq(1L), any())).willReturn(ASSIGNMENT);
+        given(assignmentService.updateAssignment(eq(1L), eq(1L), any())).willReturn(ASSIGNMENT);
 
         mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
@@ -199,10 +199,10 @@ class AssignmentControllerTest {
 
     @Test
     void updateAndDeleteAssignment_notFound_returns404() throws Exception {
-        given(assignmentService.updateAssignment(eq(99L), any()))
+        given(assignmentService.updateAssignment(eq(1L), eq(99L), any()))
                 .willThrow(new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND));
         doThrow(new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND))
-                .when(assignmentService).deleteAssignment(99L);
+                .when(assignmentService).deleteAssignment(1L, 99L);
 
         mockMvc.perform(put("/api/assignments/99").with(authentication(AUTHENTICATION)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
@@ -219,7 +219,7 @@ class AssignmentControllerTest {
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
-        verify(assignmentService).deleteAssignment(1L);
+        verify(assignmentService).deleteAssignment(1L, 1L);
     }
 
     @Test
