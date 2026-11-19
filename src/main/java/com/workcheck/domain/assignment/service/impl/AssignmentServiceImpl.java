@@ -69,7 +69,8 @@ public class AssignmentServiceImpl implements AssignmentService {
         assignment.updateTitle(request.title().strip());
         assignment.replaceRules(rules);
 
-        return AssignmentResponse.from(assignmentRepository.saveAndFlush(assignment));
+        assignmentRepository.flush();
+        return AssignmentResponse.from(assignment);
     }
 
     @Override

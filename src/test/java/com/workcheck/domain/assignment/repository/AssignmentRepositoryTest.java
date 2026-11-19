@@ -102,6 +102,33 @@ class AssignmentRepositoryTest {
     }
 
     @Test
+    void flush_assignsNewRuleIdAndRemovesReplacedRules() {
+        Member member = memberRepository.findByEmail("demo@workcheck.com").orElseThrow();
+        Assignment assignment = Assignment.builder().title("교체할 과제").member(member).build();
+        assignment.addRule(rule(FileType.ZIP, RuleType.ZIP_REQUIRED_PATH, "data.sql"));
+        assignment.addRule(rule(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌"));
+        assignment.addRule(rule(FileType.PDF, RuleType.FILE_NAME_SUFFIX, "_보고서.pdf"));
+        assignmentRepository.saveAndFlush(assignment);
+        List<Long> oldRuleIds = assignment.getRules().stream().map(CheckRule::getId).toList();
+        entityManager.clear();
+
+        Assignment managed = assignmentRepository.findByIdWithRules(assignment.getId(), member.getId()).orElseThrow();
+        CheckRule replacement = rule(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "결론");
+        managed.updateTitle("수정한 과제");
+        managed.replaceRules(List.of(replacement));
+        assignmentRepository.flush();
+
+        assertThat(replacement.getId()).isNotNull().isNotIn(oldRuleIds);
+        entityManager.clear();
+
+        Assignment reloaded = assignmentRepository.findByIdWithRules(assignment.getId(), member.getId()).orElseThrow();
+        assertThat(reloaded.getTitle()).isEqualTo("수정한 과제");
+        assertThat(reloaded.getRules()).extracting(CheckRule::getId, CheckRule::getValue)
+                .containsExactly(tuple(replacement.getId(), "결론"));
+        assertThat(checkRuleRepository.findAllById(oldRuleIds)).isEmpty();
+    }
+
+    @Test
     void delete_removesRulesAndKeepsOwner() {
         Member member = memberRepository.findByEmail("demo@workcheck.com").orElseThrow();
         Assignment assignment = Assignment.builder().title("삭제할 과제").member(member).build();

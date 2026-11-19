@@ -151,7 +151,7 @@ class AssignmentServiceImplTest {
 
         assertThat(assignment.getTitle()).isEqualTo("기존 과제");
         assertThat(assignment.getRules()).containsExactly(originalRule);
-        verify(assignmentRepository, never()).saveAndFlush(any());
+        verify(assignmentRepository, never()).flush();
     }
 
     @ParameterizedTest
@@ -168,7 +168,6 @@ class AssignmentServiceImplTest {
         assignment.addRule(originalRule);
         List<CheckRule> originalRules = assignment.getRules();
         given(assignmentRepository.findByIdWithRules(1L, 1L)).willReturn(Optional.of(assignment));
-        given(assignmentRepository.saveAndFlush(assignment)).willReturn(assignment);
         AssignmentRequest request = new AssignmentRequest("  수정한 과제  ", List.of(
                 new CheckRuleRequest(fileType, type, "  " + value + "  ")
         ));
@@ -183,6 +182,9 @@ class AssignmentServiceImplTest {
             assertThat(rule.getType()).isEqualTo(type);
             assertThat(rule.getAssignment()).isSameAs(assignment);
         });
+        verify(assignmentRepository).flush();
+        verify(assignmentRepository, never()).save(any(Assignment.class));
+        verify(assignmentRepository, never()).saveAndFlush(any(Assignment.class));
     }
 
     @Test
@@ -196,7 +198,7 @@ class AssignmentServiceImplTest {
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.ASSIGNMENT_NOT_FOUND);
 
-        verify(assignmentRepository, never()).saveAndFlush(any());
+        verify(assignmentRepository, never()).flush();
     }
 
     @Test
