@@ -6,7 +6,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -72,7 +71,7 @@ class AssignmentControllerTest {
     void createAssignment_returns201() throws Exception {
         given(assignmentService.createAssignment(eq(1L), any())).willReturn(ASSIGNMENT);
 
-        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION)).with(csrf())
+        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION))
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.id").value(1))
@@ -93,12 +92,12 @@ class AssignmentControllerTest {
             "{\"title\":\"보고서\",\"rules\":[{\"fileType\":\"TXT\",\"type\":\"PDF_REQUIRED_TEXT\",\"value\":\"참고문헌\"}]}"
     })
     void createAndUpdateAssignment_invalidInput_returns400(String request) throws Exception {
-        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION)).with(csrf())
+        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION))
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
 
-        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION)).with(csrf())
+        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION))
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
@@ -110,12 +109,12 @@ class AssignmentControllerTest {
     void createAndUpdateAssignment_longTitle_returns400() throws Exception {
         String request = REQUEST.replace("과학 탐구 보고서", "가".repeat(101));
 
-        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION)).with(csrf())
+        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION))
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
 
-        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION)).with(csrf())
+        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION))
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
@@ -127,12 +126,12 @@ class AssignmentControllerTest {
     void createAndUpdateAssignment_longRuleValue_returns400() throws Exception {
         String request = REQUEST.replace("참고문헌", "가".repeat(501));
 
-        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION)).with(csrf())
+        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION))
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
 
-        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION)).with(csrf())
+        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION))
                         .contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
@@ -177,20 +176,10 @@ class AssignmentControllerTest {
     }
 
     @Test
-    void createAssignment_withoutCsrf_returns403() throws Exception {
-        mockMvc.perform(post("/api/assignments").with(authentication(AUTHENTICATION))
-                        .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CSRF"));
-
-        verifyNoInteractions(assignmentService);
-    }
-
-    @Test
     void updateAssignment_returns200() throws Exception {
         given(assignmentService.updateAssignment(eq(1L), eq(1L), any())).willReturn(ASSIGNMENT);
 
-        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION)).with(csrf())
+        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION))
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(1))
@@ -204,18 +193,18 @@ class AssignmentControllerTest {
         doThrow(new CustomException(ErrorCode.ASSIGNMENT_NOT_FOUND))
                 .when(assignmentService).deleteAssignment(1L, 99L);
 
-        mockMvc.perform(put("/api/assignments/99").with(authentication(AUTHENTICATION)).with(csrf())
+        mockMvc.perform(put("/api/assignments/99").with(authentication(AUTHENTICATION))
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND"));
-        mockMvc.perform(delete("/api/assignments/99").with(authentication(AUTHENTICATION)).with(csrf()))
+        mockMvc.perform(delete("/api/assignments/99").with(authentication(AUTHENTICATION)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND"));
     }
 
     @Test
     void deleteAssignment_returns204WithoutBody() throws Exception {
-        mockMvc.perform(delete("/api/assignments/1").with(authentication(AUTHENTICATION)).with(csrf()))
+        mockMvc.perform(delete("/api/assignments/1").with(authentication(AUTHENTICATION)))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
@@ -224,24 +213,11 @@ class AssignmentControllerTest {
 
     @Test
     void updateAndDeleteAssignment_withoutSignin_returns401() throws Exception {
-        mockMvc.perform(put("/api/assignments/1").with(csrf())
+        mockMvc.perform(put("/api/assignments/1")
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(delete("/api/assignments/1").with(csrf()))
+        mockMvc.perform(delete("/api/assignments/1"))
                 .andExpect(status().isUnauthorized());
-
-        verifyNoInteractions(assignmentService);
-    }
-
-    @Test
-    void updateAndDeleteAssignment_withoutCsrf_returns403() throws Exception {
-        mockMvc.perform(put("/api/assignments/1").with(authentication(AUTHENTICATION))
-                        .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CSRF"));
-        mockMvc.perform(delete("/api/assignments/1").with(authentication(AUTHENTICATION)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CSRF"));
 
         verifyNoInteractions(assignmentService);
     }

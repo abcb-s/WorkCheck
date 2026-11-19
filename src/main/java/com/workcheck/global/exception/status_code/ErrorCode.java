@@ -21,7 +21,6 @@ public enum ErrorCode {
 
     // 403
     FORBIDDEN(HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없어요."),
-    INVALID_CSRF(HttpStatus.FORBIDDEN, "INVALID_CSRF", "보안 토큰이 없거나 만료됐어요. 새로고침 후 다시 시도해 주세요."),
 
     // 404
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "회원을 찾을 수 없어요."),

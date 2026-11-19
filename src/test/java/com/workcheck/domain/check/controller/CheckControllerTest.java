@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -65,7 +64,7 @@ class CheckControllerTest {
         given(checkService.check(eq(1L), eq(1L), any())).willReturn(FAIL_CHECK);
 
         mockMvc.perform(multipart("/api/assignments/1/checks").file(FILE)
-                        .with(authentication(AUTHENTICATION)).with(csrf()))
+                        .with(authentication(AUTHENTICATION)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.id").value(5))
                 .andExpect(jsonPath("$.data.status").value("FAIL"))
@@ -78,7 +77,7 @@ class CheckControllerTest {
         given(checkService.check(eq(1L), eq(1L), any())).willThrow(new CustomException(ErrorCode.INVALID_FILE));
 
         mockMvc.perform(multipart("/api/assignments/1/checks").file(FILE)
-                        .with(authentication(AUTHENTICATION)).with(csrf()))
+                        .with(authentication(AUTHENTICATION)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_FILE"));
     }
@@ -89,7 +88,7 @@ class CheckControllerTest {
                 .willThrow(new CustomException(ErrorCode.UNSUPPORTED_FILE_TYPE));
 
         mockMvc.perform(multipart("/api/assignments/1/checks").file(FILE)
-                        .with(authentication(AUTHENTICATION)).with(csrf()))
+                        .with(authentication(AUTHENTICATION)))
                 .andExpect(status().isUnsupportedMediaType())
                 .andExpect(jsonPath("$.error.code").value("UNSUPPORTED_FILE_TYPE"));
     }
@@ -97,7 +96,7 @@ class CheckControllerTest {
     @Test
     void check_withoutFilePart_returns400() throws Exception {
         mockMvc.perform(multipart("/api/assignments/1/checks")
-                        .with(authentication(AUTHENTICATION)).with(csrf()))
+                        .with(authentication(AUTHENTICATION)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("EMPTY_FILE"));
 
@@ -106,18 +105,9 @@ class CheckControllerTest {
 
     @Test
     void check_withoutSignin_returns401() throws Exception {
-        mockMvc.perform(multipart("/api/assignments/1/checks").file(FILE).with(csrf()))
+        mockMvc.perform(multipart("/api/assignments/1/checks").file(FILE))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
-
-        verifyNoInteractions(checkService);
-    }
-
-    @Test
-    void check_withoutCsrf_returns403() throws Exception {
-        mockMvc.perform(multipart("/api/assignments/1/checks").file(FILE).with(authentication(AUTHENTICATION)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CSRF"));
 
         verifyNoInteractions(checkService);
     }

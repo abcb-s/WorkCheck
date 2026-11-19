@@ -18,7 +18,6 @@ import com.workcheck.domain.member.repository.MemberRepository;
 import com.workcheck.global.data.FileType;
 import com.workcheck.global.data.RuleType;
 import jakarta.persistence.EntityManager;
-import jakarta.servlet.http.Cookie;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -72,37 +70,31 @@ class AssignmentFlowTest {
     @Autowired
     private MemberRepository memberRepository;
 
-    private MockHttpSession session;
-    private Cookie xsrf;
+    private String accessToken;
     private Long memberId;
 
     @BeforeEach
     void signin() throws Exception {
-        MvcResult csrfResult = mockMvc.perform(get("/api/members/csrf"))
-                .andExpect(status().isNoContent()).andReturn();
-        xsrf = csrfResult.getResponse().getCookie("XSRF-TOKEN");
-        assertThat(xsrf).isNotNull();
+        accessToken = signin("demo@workcheck.com", "password1234");
+        memberId = memberRepository.findByEmail("demo@workcheck.com").orElseThrow().getId();
+    }
 
-        MvcResult result = mockMvc.perform(post("/api/members/signin")
-                        .cookie(xsrf).header("X-XSRF-TOKEN", xsrf.getValue())
-                        .contentType(MediaType.APPLICATION_JSON).content("""
-                                {"email":"demo@workcheck.com","password":"password1234"}
-                                """))
+    private String signin(String email, String password) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/member/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}"))
                 .andExpect(status().isOk()).andReturn();
-        memberId = jsonMapper.readTree(result.getResponse().getContentAsString()).get("data").get("id").asLong();
-        session = (MockHttpSession) result.getRequest().getSession(false);
-        assertThat(session).isNotNull();
+        return jsonMapper.readTree(result.getResponse().getContentAsString())
+                .get("data").get("accessToken").asString();
     }
 
     private RequestPostProcessor signedIn() {
-        return signedIn(session, xsrf);
+        return signedIn(accessToken);
     }
 
-    private RequestPostProcessor signedIn(MockHttpSession memberSession, Cookie token) {
+    private RequestPostProcessor signedIn(String token) {
         return request -> {
-            request.setSession(memberSession);
-            request.setCookies(token);
-            request.addHeader("X-XSRF-TOKEN", token.getValue());
+            request.addHeader("Authorization", "Bearer " + token);
             return request;
         };
     }
@@ -287,32 +279,20 @@ class AssignmentFlowTest {
         var original = jsonMapper.readTree(created.getResponse().getContentAsString()).get("data");
         long assignmentId = original.get("id").asLong();
 
-        MvcResult csrfResult = mockMvc.perform(get("/api/members/csrf"))
-                .andExpect(status().isNoContent()).andReturn();
-        Cookie otherXsrf = csrfResult.getResponse().getCookie("XSRF-TOKEN");
-        assertThat(otherXsrf).isNotNull();
-        MvcResult signup = mockMvc.perform(post("/api/members")
-                        .cookie(otherXsrf).header("X-XSRF-TOKEN", otherXsrf.getValue())
+        MvcResult signup = mockMvc.perform(post("/api/member/signup")
                         .contentType(MediaType.APPLICATION_JSON).content("""
                                 {"email":"other.assignment@workcheck.com","password":"password1234","name":"다른 회원"}
                                 """))
                 .andExpect(status().isCreated()).andReturn();
         long otherMemberId = jsonMapper.readTree(signup.getResponse().getContentAsString())
                 .get("data").get("id").asLong();
-        MvcResult signin = mockMvc.perform(post("/api/members/signin")
-                        .cookie(otherXsrf).header("X-XSRF-TOKEN", otherXsrf.getValue())
-                        .contentType(MediaType.APPLICATION_JSON).content("""
-                                {"email":"other.assignment@workcheck.com","password":"password1234"}
-                                """))
-                .andExpect(status().isOk()).andReturn();
-        MockHttpSession otherSession = (MockHttpSession) signin.getRequest().getSession(false);
-        assertThat(otherSession).isNotNull();
+        String otherToken = signin("other.assignment@workcheck.com", "password1234");
 
-        mockMvc.perform(get("/api/assignments").with(signedIn(otherSession, otherXsrf)))
+        mockMvc.perform(get("/api/assignments").with(signedIn(otherToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isEmpty());
         MvcResult otherCreated = mockMvc.perform(post("/api/assignments")
-                        .with(signedIn(otherSession, otherXsrf))
+                        .with(signedIn(otherToken))
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isCreated()).andReturn();
         var otherAssignment = jsonMapper.readTree(otherCreated.getResponse().getContentAsString()).get("data");
@@ -322,25 +302,25 @@ class AssignmentFlowTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.id == " + assignmentId + ")]").isNotEmpty())
                 .andExpect(jsonPath("$.data[?(@.id == " + otherAssignmentId + ")]").isEmpty());
-        mockMvc.perform(get("/api/assignments").with(signedIn(otherSession, otherXsrf)))
+        mockMvc.perform(get("/api/assignments").with(signedIn(otherToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].id").value(otherAssignmentId));
 
         MvcResult hidden = mockMvc.perform(get("/api/assignments/" + assignmentId)
-                        .with(signedIn(otherSession, otherXsrf)))
+                        .with(signedIn(otherToken)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND")).andReturn();
         MvcResult missing = mockMvc.perform(get("/api/assignments/" + Long.MAX_VALUE)
-                        .with(signedIn(otherSession, otherXsrf)))
+                        .with(signedIn(otherToken)))
                 .andExpect(status().isNotFound()).andReturn();
         assertThat(hidden.getResponse().getContentAsString())
                 .isEqualTo(missing.getResponse().getContentAsString());
-        mockMvc.perform(put("/api/assignments/" + assignmentId).with(signedIn(otherSession, otherXsrf))
+        mockMvc.perform(put("/api/assignments/" + assignmentId).with(signedIn(otherToken))
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST.replace("처음 과제", "수정 시도")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND"));
-        mockMvc.perform(delete("/api/assignments/" + assignmentId).with(signedIn(otherSession, otherXsrf)))
+        mockMvc.perform(delete("/api/assignments/" + assignmentId).with(signedIn(otherToken)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("ASSIGNMENT_NOT_FOUND"));
         entityManager.flush();
@@ -355,7 +335,7 @@ class AssignmentFlowTest {
         assertThat(otherPersisted.getMember().getId()).isEqualTo(otherMemberId);
         List<Long> otherRuleIds = otherPersisted.getRules().stream().map(CheckRule::getId).toList();
 
-        mockMvc.perform(delete("/api/assignments/" + otherAssignmentId).with(signedIn(otherSession, otherXsrf)))
+        mockMvc.perform(delete("/api/assignments/" + otherAssignmentId).with(signedIn(otherToken)))
                 .andExpect(status().isNoContent());
         entityManager.flush();
         entityManager.clear();
