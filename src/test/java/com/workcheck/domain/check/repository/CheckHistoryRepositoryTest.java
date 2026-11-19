@@ -102,14 +102,16 @@ class CheckHistoryRepositoryTest {
 
     @Test
     void deleteAssignment_deletesHistoriesAndResults() {
-        saveHistory(assignment, "project.zip", CheckStatus.FAIL);
+        CheckHistory history = saveHistory(assignment, "project.zip", CheckStatus.FAIL);
         entityManager.clear();
 
         assignmentRepository.delete(assignmentRepository.findById(assignment.getId()).orElseThrow());
         assignmentRepository.flush();
 
-        assertThat(checkHistoryRepository.count()).isZero();
-        assertThat(entityManager.createQuery("select count(r) from CheckResult r", Long.class).getSingleResult())
-                .isZero();
+        assertThat(checkHistoryRepository.findById(history.getId())).isEmpty();
+        assertThat(entityManager.createQuery(
+                        "select count(r) from CheckResult r where r.checkHistory.id = :historyId", Long.class)
+                .setParameter("historyId", history.getId())
+                .getSingleResult()).isZero();
     }
 }
