@@ -1,9 +1,9 @@
 package com.workcheck.domain.checkresult.service.impl;
 
+import com.workcheck.domain.checkresult.dto.request.CheckResultRequest;
 import com.workcheck.domain.checkresult.dto.response.CheckResultResponse;
 import com.workcheck.domain.checkresult.dto.response.RuleCheckResultResponse;
 import com.workcheck.domain.checkresult.service.CheckResultService;
-import com.workcheck.global.data.FileType;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
 import java.util.List;
@@ -13,10 +13,8 @@ import org.springframework.stereotype.Service;
 public class CheckResultServiceImpl implements CheckResultService {
 
     @Override
-    public CheckResultResponse createCheckResult(Long assignmentId,
-                                                 String fileName,
-                                                 FileType fileType,
-                                                 List<RuleCheckResultResponse> ruleResults) {
+    public CheckResultResponse createCheckResult(CheckResultRequest request) {
+        List<RuleCheckResultResponse> ruleResults = request.ruleResults();
         if (ruleResults.isEmpty()) {
             throw new CustomException(ErrorCode.NO_APPLICABLE_RULE);
         }
@@ -29,6 +27,7 @@ public class CheckResultServiceImpl implements CheckResultService {
             }
         }
 
-        return new CheckResultResponse(assignmentId, fileName, fileType, allPassed, ruleResults);
+        return new CheckResultResponse(request.assignmentId(), request.fileName(), request.fileType(), allPassed,
+                ruleResults);
     }
 }
