@@ -7,6 +7,7 @@ import com.workcheck.domain.member.dto.response.SigninResponse;
 import com.workcheck.domain.member.service.MemberService;
 import com.workcheck.global.data.BaseResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,12 +29,14 @@ public class MemberController {
     private final MemberService memberService;
 
     @Operation(summary = "회원가입")
+    @SecurityRequirements
     @PostMapping("/signup")
     public ResponseEntity<BaseResponse<MemberResponse>> signup(@Valid @RequestBody SignupRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.success(memberService.signup(request)));
     }
 
-    @Operation(summary = "로그인", description = "accessToken을 발급해요. 이후 요청에 Authorization: Bearer 헤더로 보내 주세요.")
+    @Operation(summary = "로그인", description = "accessToken을 발급해요. Swagger 오른쪽 위 Authorize에 넣으면 이후 요청에 자동으로 붙어요.")
+    @SecurityRequirements
     @PostMapping("/login")
     public ResponseEntity<BaseResponse<SigninResponse>> signin(@Valid @RequestBody SigninRequest request) {
         return ResponseEntity.ok(BaseResponse.success(memberService.signin(request)));
