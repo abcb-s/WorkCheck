@@ -3,7 +3,6 @@ package com.workcheck.domain.member.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -12,10 +11,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.workcheck.domain.member.dto.response.MemberResponse;
+import com.workcheck.domain.member.dto.response.SigninResponse;
 import com.workcheck.domain.member.service.MemberService;
 import com.workcheck.global.config.SecurityConfig;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
+import com.workcheck.global.security.JwtProvider;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,9 @@ class MemberControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private JwtProvider jwtProvider;
+
     @MockitoBean
     private MemberService memberService;
 
@@ -54,7 +58,7 @@ class MemberControllerTest {
     void signup_returns201() throws Exception {
         given(memberService.signup(any())).willReturn(MEMBER);
 
-        mockMvc.perform(post("/api/members").with(csrf())
+        mockMvc.perform(post("/api/member/signup")
                         .contentType(MediaType.APPLICATION_JSON).content(SIGNUP_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.id").value(1))
@@ -63,15 +67,8 @@ class MemberControllerTest {
     }
 
     @Test
-    void signup_withoutCsrf_returns403() throws Exception {
-        mockMvc.perform(post("/api/members").contentType(MediaType.APPLICATION_JSON).content(SIGNUP_JSON))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.code").value("INVALID_CSRF"));
-    }
-
-    @Test
     void signup_invalidInput_returns400() throws Exception {
-        mockMvc.perform(post("/api/members").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/member/signup").contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"not-email","password":"short","name":""}"""))
                 .andExpect(status().isBadRequest())
@@ -82,7 +79,7 @@ class MemberControllerTest {
     void signup_passwordOverBcryptLimit_returns400() throws Exception {
         String password = "가".repeat(30);
 
-        mockMvc.perform(post("/api/members").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/member/signup").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"a@b.com\",\"password\":\"" + password + "\",\"name\":\"학생\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
@@ -92,7 +89,7 @@ class MemberControllerTest {
     void signup_duplicateEmail_returns409() throws Exception {
         given(memberService.signup(any())).willThrow(new CustomException(ErrorCode.DUPLICATE_EMAIL));
 
-        mockMvc.perform(post("/api/members").with(csrf())
+        mockMvc.perform(post("/api/member/signup")
                         .contentType(MediaType.APPLICATION_JSON).content(SIGNUP_JSON))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DUPLICATE_EMAIL"));
@@ -100,20 +97,20 @@ class MemberControllerTest {
 
     @Test
     void signin_returns200() throws Exception {
-        given(memberService.signin(any())).willReturn(MEMBER);
+        given(memberService.signin(any())).willReturn(new SigninResponse("access-token"));
 
-        mockMvc.perform(post("/api/members/signin").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/member/login").contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"a@b.com","password":"password1"}"""))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(1));
+                .andExpect(jsonPath("$.data.accessToken").value("access-token"));
     }
 
     @Test
     void signin_wrongCredentials_returns401() throws Exception {
         given(memberService.signin(any())).willThrow(new CustomException(ErrorCode.SIGNIN_FAILED));
 
-        mockMvc.perform(post("/api/members/signin").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/member/login").contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"a@b.com","password":"wrong-pass"}"""))
                 .andExpect(status().isUnauthorized())
@@ -124,14 +121,31 @@ class MemberControllerTest {
     void me_authenticated_returns200() throws Exception {
         given(memberService.getMember(1L)).willReturn(MEMBER);
 
-        mockMvc.perform(get("/api/members/me").with(authentication(signedIn(1L))))
+        mockMvc.perform(get("/api/member/me").with(authentication(signedIn(1L))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value("a@b.com"));
     }
 
     @Test
+    void me_validBearerToken_returns200() throws Exception {
+        given(memberService.getMember(1L)).willReturn(MEMBER);
+
+        mockMvc.perform(get("/api/member/me")
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(1L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(1));
+    }
+
+    @Test
+    void me_invalidBearerToken_returns401() throws Exception {
+        mockMvc.perform(get("/api/member/me").header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
     void me_anonymous_returns401() throws Exception {
-        mockMvc.perform(get("/api/members/me"))
+        mockMvc.perform(get("/api/member/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
     }
@@ -144,7 +158,7 @@ class MemberControllerTest {
 
     @Test
     void cors_preflight_allowedOrigin() throws Exception {
-        mockMvc.perform(options("/api/members/signin")
+        mockMvc.perform(options("/api/member/login")
                         .header("Origin", "http://localhost:5173")
                         .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isOk())
@@ -154,7 +168,7 @@ class MemberControllerTest {
 
     @Test
     void cors_preflight_unknownOrigin_rejected() throws Exception {
-        mockMvc.perform(options("/api/members/signin")
+        mockMvc.perform(options("/api/member/login")
                         .header("Origin", "http://evil.example")
                         .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isForbidden());
