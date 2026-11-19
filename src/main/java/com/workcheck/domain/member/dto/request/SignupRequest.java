@@ -1,5 +1,6 @@
 package com.workcheck.domain.member.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -23,6 +24,7 @@ public record SignupRequest(
 
     private static final int BCRYPT_MAX_BYTES = 72;
 
+    @JsonIgnore
     @AssertTrue(message = "비밀번호가 너무 길어요. 한글은 24자 이하로 입력해 주세요.")
     public boolean isPasswordWithinBcryptLimit() {
         return password == null || password.getBytes(StandardCharsets.UTF_8).length <= BCRYPT_MAX_BYTES;

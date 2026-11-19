@@ -16,7 +16,7 @@ import com.workcheck.domain.member.repository.MemberRepository;
 import com.workcheck.domain.member.service.impl.MemberServiceImpl;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
-import com.workcheck.global.security.SessionAuthenticator;
+import com.workcheck.global.security.JwtProvider;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +37,7 @@ class MemberServiceImplTest {
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(4);
 
     @Mock
-    private SessionAuthenticator sessionAuthenticator;
+    private JwtProvider jwtProvider;
 
     @InjectMocks
     private MemberServiceImpl memberService;
@@ -70,9 +70,10 @@ class MemberServiceImplTest {
         Member member = Member.builder().id(1L).email("a@b.com")
                 .password(passwordEncoder.encode("password1")).name("학생").build();
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
+        given(jwtProvider.createAccessToken(1L)).willReturn("access-token");
 
-        assertThat(memberService.signin(new SigninRequest("A@b.com", "password1")).id()).isEqualTo(1L);
-        verify(sessionAuthenticator).signin(1L);
+        assertThat(memberService.signin(new SigninRequest("A@b.com", "password1")).accessToken())
+                .isEqualTo("access-token");
     }
 
     @Test
@@ -83,7 +84,7 @@ class MemberServiceImplTest {
 
         assertThatThrownBy(() -> memberService.signin(new SigninRequest("a@b.com", "wrong")))
                 .extracting("errorCode").isEqualTo(ErrorCode.SIGNIN_FAILED);
-        verify(sessionAuthenticator, never()).signin(any());
+        verify(jwtProvider, never()).createAccessToken(any());
     }
 
     @Test
@@ -92,7 +93,7 @@ class MemberServiceImplTest {
 
         assertThatThrownBy(() -> memberService.signin(new SigninRequest("x@b.com", "password1")))
                 .extracting("errorCode").isEqualTo(ErrorCode.SIGNIN_FAILED);
-        verify(sessionAuthenticator, never()).signin(any());
+        verify(jwtProvider, never()).createAccessToken(any());
     }
 
     @Test

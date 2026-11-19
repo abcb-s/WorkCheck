@@ -3,12 +3,13 @@ package com.workcheck.domain.member.service.impl;
 import com.workcheck.domain.member.dto.request.SigninRequest;
 import com.workcheck.domain.member.dto.request.SignupRequest;
 import com.workcheck.domain.member.dto.response.MemberResponse;
+import com.workcheck.domain.member.dto.response.SigninResponse;
 import com.workcheck.domain.member.entity.Member;
 import com.workcheck.domain.member.repository.MemberRepository;
 import com.workcheck.domain.member.service.MemberService;
 import com.workcheck.global.exception.exception.CustomException;
 import com.workcheck.global.exception.status_code.ErrorCode;
-import com.workcheck.global.security.SessionAuthenticator;
+import com.workcheck.global.security.JwtProvider;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,7 +23,7 @@ public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
-    private final SessionAuthenticator sessionAuthenticator;
+    private final JwtProvider jwtProvider;
 
     @Override
     public MemberResponse signup(SignupRequest request) {
@@ -44,15 +45,13 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     @Transactional(readOnly = true)
-    public MemberResponse signin(SigninRequest request) {
+    public SigninResponse signin(SigninRequest request) {
 
         Member member = memberRepository.findByEmail(normalizeEmail(request.email()))
                 .filter(found -> passwordEncoder.matches(request.password(), found.getPassword()))
                 .orElseThrow(() -> new CustomException(ErrorCode.SIGNIN_FAILED));
 
-        sessionAuthenticator.signin(member.getId());
-
-        return MemberResponse.from(member);
+        return SigninResponse.from(jwtProvider.createAccessToken(member.getId()));
     }
 
     @Override

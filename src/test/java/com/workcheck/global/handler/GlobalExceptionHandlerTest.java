@@ -1,6 +1,5 @@
 package com.workcheck.global.handler;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -40,14 +39,14 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void unsupportedMethod_returns405() throws Exception {
-        mockMvc.perform(delete("/api/members/me").with(user("1")).with(csrf()))
+        mockMvc.perform(delete("/api/member/me").with(user("1")))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.error.code").value("METHOD_NOT_ALLOWED"));
     }
 
     @Test
     void unsupportedContentType_returns415() throws Exception {
-        mockMvc.perform(post("/api/members").with(csrf())
+        mockMvc.perform(post("/api/member/signup")
                         .contentType(MediaType.TEXT_PLAIN).content("x"))
                 .andExpect(status().isUnsupportedMediaType())
                 .andExpect(jsonPath("$.error.code").value("UNSUPPORTED_MEDIA_TYPE"));
@@ -55,7 +54,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void malformedJson_returns400() throws Exception {
-        mockMvc.perform(post("/api/members").with(csrf())
+        mockMvc.perform(post("/api/member/signup")
                         .contentType(MediaType.APPLICATION_JSON).content("{"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
