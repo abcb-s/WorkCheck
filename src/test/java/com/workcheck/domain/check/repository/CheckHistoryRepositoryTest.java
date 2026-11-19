@@ -114,4 +114,35 @@ class CheckHistoryRepositoryTest {
                 .setParameter("historyId", history.getId())
                 .getSingleResult()).isZero();
     }
+
+    @Test
+    void findAllByMemberId_returnsOnlyMyHistoriesWithAssignment() {
+        Member other = memberRepository.save(Member.builder().email("other@workcheck.com")
+                .password("hash").name("다른 회원").build());
+        Assignment otherAssignment = assignmentRepository.saveAndFlush(
+                Assignment.builder().title("다른 회원 과제").member(other).build());
+        Assignment second = assignmentRepository.saveAndFlush(
+                Assignment.builder().title("두 번째 과제").member(member).build());
+        CheckHistory first = saveHistory(assignment, "first.zip", CheckStatus.FAIL);
+        CheckHistory latest = saveHistory(second, "latest.pdf", CheckStatus.PASS);
+        saveHistory(otherAssignment, "other.zip", CheckStatus.FAIL);
+        entityManager.clear();
+
+        List<CheckHistory> found = checkHistoryRepository.findAllByMemberId(member.getId());
+
+        assertThat(found).extracting(CheckHistory::getId).containsExactly(latest.getId(), first.getId());
+        assertThat(found).allSatisfy(history ->
+                assertThat(Hibernate.isInitialized(history.getAssignment())).isTrue());
+    }
+
+    @Test
+    void findAllByMemberIdAndStatus_returnsOnlyMatchingStatus() {
+        saveHistory(assignment, "fail.zip", CheckStatus.FAIL);
+        saveHistory(assignment, "pass.zip", CheckStatus.PASS);
+        entityManager.clear();
+
+        List<CheckHistory> found = checkHistoryRepository.findAllByMemberIdAndStatus(member.getId(), CheckStatus.PASS);
+
+        assertThat(found).extracting(CheckHistory::getFileName).containsExactly("pass.zip");
+    }
 }
