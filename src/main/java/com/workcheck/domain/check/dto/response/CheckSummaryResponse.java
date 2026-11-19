@@ -6,13 +6,16 @@ import java.time.LocalDateTime;
 
 public record CheckSummaryResponse(
         Long id,
+        Long assignmentId,
+        String assignmentTitle,
         String fileName,
         CheckStatus status,
         LocalDateTime createdAt
 ) {
 
     public static CheckSummaryResponse from(CheckHistory history) {
-        return new CheckSummaryResponse(history.getId(), history.getFileName(), history.getStatus(),
+        return new CheckSummaryResponse(history.getId(), history.getAssignment().getId(),
+                history.getAssignment().getTitle(), history.getFileName(), history.getStatus(),
                 history.getCreatedAt());
     }
 }

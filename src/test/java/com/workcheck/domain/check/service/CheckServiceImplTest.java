@@ -251,9 +251,14 @@ class CheckServiceImplTest {
         verifyNoInteractions(checkHistoryRepository);
     }
 
+    private static CheckHistory history(String fileName, CheckStatus status) {
+        Assignment assignment = Assignment.builder().id(1L).title("자바 프로젝트").build();
+        return CheckHistory.builder().assignment(assignment).fileName(fileName).status(status).build();
+    }
+
     @Test
     void getChecks_withStatus_usesStatusFilter() {
-        CheckHistory history = CheckHistory.builder().fileName("project.zip").status(CheckStatus.FAIL).build();
+        CheckHistory history = history("project.zip", CheckStatus.FAIL);
         given(assignmentRepository.existsByIdAndMember_Id(1L, 1L)).willReturn(true);
         given(checkHistoryRepository.findByAssignment_IdAndStatusOrderByCreatedAtDescIdDesc(1L, CheckStatus.FAIL))
                 .willReturn(List.of(history));
@@ -268,8 +273,7 @@ class CheckServiceImplTest {
     void getChecks_withoutStatus_returnsAll() {
         given(assignmentRepository.existsByIdAndMember_Id(1L, 1L)).willReturn(true);
         given(checkHistoryRepository.findByAssignment_IdOrderByCreatedAtDescIdDesc(1L)).willReturn(List.of(
-                CheckHistory.builder().fileName("second.zip").status(CheckStatus.PASS).build(),
-                CheckHistory.builder().fileName("first.zip").status(CheckStatus.FAIL).build()));
+                history("second.zip", CheckStatus.PASS), history("first.zip", CheckStatus.FAIL)));
 
         List<CheckSummaryResponse> responses = checkService.getChecks(1L, 1L, null);
 

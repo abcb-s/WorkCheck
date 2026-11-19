@@ -115,7 +115,8 @@ class CheckControllerTest {
     @Test
     void getChecks_withStatus_returns200() throws Exception {
         given(checkService.getChecks(1L, 1L, CheckStatus.FAIL)).willReturn(List.of(
-                new CheckSummaryResponse(5L, "project.zip", CheckStatus.FAIL, LocalDateTime.of(2026, 11, 19, 9, 0))));
+                new CheckSummaryResponse(5L, 1L, "자바 프로젝트", "project.zip", CheckStatus.FAIL,
+                        LocalDateTime.of(2026, 11, 19, 9, 0))));
 
         mockMvc.perform(get("/api/assignments/1/checks").param("status", "FAIL")
                         .with(authentication(AUTHENTICATION)))
