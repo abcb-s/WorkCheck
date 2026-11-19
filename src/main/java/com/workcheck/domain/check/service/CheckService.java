@@ -10,6 +10,8 @@ public interface CheckService {
 
     CheckResponse check(Long memberId, Long assignmentId, MultipartFile file);
 
+    List<CheckSummaryResponse> getMyChecks(Long memberId, CheckStatus status);
+
     List<CheckSummaryResponse> getChecks(Long memberId, Long assignmentId, CheckStatus status);
 
     CheckResponse getCheck(Long memberId, Long assignmentId, Long checkId);

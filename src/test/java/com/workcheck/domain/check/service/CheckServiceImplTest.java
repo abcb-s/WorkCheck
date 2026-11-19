@@ -257,6 +257,32 @@ class CheckServiceImplTest {
     }
 
     @Test
+    void getMyChecks_withoutStatus_returnsAllWithAssignment() {
+        given(checkHistoryRepository.findAllByMemberId(1L)).willReturn(List.of(
+                history("second.zip", CheckStatus.PASS), history("first.zip", CheckStatus.FAIL)));
+
+        List<CheckSummaryResponse> responses = checkService.getMyChecks(1L, null);
+
+        assertThat(responses).extracting("fileName").containsExactly("second.zip", "first.zip");
+        assertThat(responses).allSatisfy(response -> {
+            assertThat(response.assignmentId()).isEqualTo(1L);
+            assertThat(response.assignmentTitle()).isEqualTo("자바 프로젝트");
+        });
+        verify(checkHistoryRepository, never()).findAllByMemberIdAndStatus(any(), any());
+    }
+
+    @Test
+    void getMyChecks_withStatus_usesStatusFilter() {
+        given(checkHistoryRepository.findAllByMemberIdAndStatus(1L, CheckStatus.FAIL))
+                .willReturn(List.of(history("project.zip", CheckStatus.FAIL)));
+
+        List<CheckSummaryResponse> responses = checkService.getMyChecks(1L, CheckStatus.FAIL);
+
+        assertThat(responses).extracting("status").containsExactly(CheckStatus.FAIL);
+        verify(checkHistoryRepository, never()).findAllByMemberId(any());
+    }
+
+    @Test
     void getChecks_withStatus_usesStatusFilter() {
         CheckHistory history = history("project.zip", CheckStatus.FAIL);
         given(assignmentRepository.existsByIdAndMember_Id(1L, 1L)).willReturn(true);

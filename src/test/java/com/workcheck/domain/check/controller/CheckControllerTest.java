@@ -153,4 +153,34 @@ class CheckControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("CHECK_NOT_FOUND"));
     }
+
+    @Test
+    void getMyChecks_returns200() throws Exception {
+        given(checkService.getMyChecks(1L, null)).willReturn(List.of(
+                new CheckSummaryResponse(5L, 1L, "자바 프로젝트", "project.zip", CheckStatus.FAIL,
+                        LocalDateTime.of(2026, 11, 19, 9, 0))));
+
+        mockMvc.perform(get("/api/checks").with(authentication(AUTHENTICATION)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(5))
+                .andExpect(jsonPath("$.data[0].assignmentId").value(1))
+                .andExpect(jsonPath("$.data[0].assignmentTitle").value("자바 프로젝트"));
+    }
+
+    @Test
+    void getMyChecks_invalidStatus_returns400() throws Exception {
+        mockMvc.perform(get("/api/checks").param("status", "DONE").with(authentication(AUTHENTICATION)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+
+        verifyNoInteractions(checkService);
+    }
+
+    @Test
+    void getMyChecks_withoutSignin_returns401() throws Exception {
+        mockMvc.perform(get("/api/checks"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(checkService);
+    }
 }

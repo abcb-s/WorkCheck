@@ -60,6 +60,18 @@ public class CheckServiceImpl implements CheckService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<CheckSummaryResponse> getMyChecks(Long memberId, CheckStatus status) {
+        List<CheckHistory> histories = status == null
+                ? checkHistoryRepository.findAllByMemberId(memberId)
+                : checkHistoryRepository.findAllByMemberIdAndStatus(memberId, status);
+
+        return histories.stream()
+                .map(CheckSummaryResponse::from)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<CheckSummaryResponse> getChecks(Long memberId, Long assignmentId, CheckStatus status) {
         validateOwner(memberId, assignmentId);
 

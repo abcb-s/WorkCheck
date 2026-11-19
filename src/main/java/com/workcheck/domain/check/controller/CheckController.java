@@ -24,14 +24,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "Check", description = "제출 파일 검사")
 @RestController
-@RequestMapping("/api/assignments/{assignmentId}/checks")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class CheckController {
 
     private final CheckService checkService;
 
     @Operation(summary = "제출 파일 검사")
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/assignments/{assignmentId}/checks", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BaseResponse<CheckResponse>> check(
             @AuthenticationPrincipal Long memberId, @PathVariable Long assignmentId,
             @RequestPart("file") MultipartFile file) {
@@ -39,8 +39,15 @@ public class CheckController {
                 .body(BaseResponse.success(checkService.check(memberId, assignmentId, file)));
     }
 
-    @Operation(summary = "검사 기록 목록 조회")
-    @GetMapping
+    @Operation(summary = "내 검사 기록 전체 조회", description = "모든 과제의 검사 기록을 최신순으로 보여줘요.")
+    @GetMapping("/checks")
+    public ResponseEntity<BaseResponse<List<CheckSummaryResponse>>> getMyChecks(
+            @AuthenticationPrincipal Long memberId, @RequestParam(required = false) CheckStatus status) {
+        return ResponseEntity.ok(BaseResponse.success(checkService.getMyChecks(memberId, status)));
+    }
+
+    @Operation(summary = "과제별 검사 기록 목록 조회")
+    @GetMapping("/assignments/{assignmentId}/checks")
     public ResponseEntity<BaseResponse<List<CheckSummaryResponse>>> getChecks(
             @AuthenticationPrincipal Long memberId, @PathVariable Long assignmentId,
             @RequestParam(required = false) CheckStatus status) {
@@ -48,7 +55,7 @@ public class CheckController {
     }
 
     @Operation(summary = "검사 기록 상세 조회")
-    @GetMapping("/{checkId}")
+    @GetMapping("/assignments/{assignmentId}/checks/{checkId}")
     public ResponseEntity<BaseResponse<CheckResponse>> getCheck(
             @AuthenticationPrincipal Long memberId, @PathVariable Long assignmentId, @PathVariable Long checkId) {
         return ResponseEntity.ok(BaseResponse.success(checkService.getCheck(memberId, assignmentId, checkId)));
