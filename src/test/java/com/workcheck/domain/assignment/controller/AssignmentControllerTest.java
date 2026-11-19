@@ -82,6 +82,19 @@ class AssignmentControllerTest {
                 .andExpect(jsonPath("$.error").doesNotExist());
     }
 
+    @Test
+    void createAssignment_wrongRuleCombination_returns400WithMessage() throws Exception {
+        String request = REQUEST.replace("\"PDF\"", "\"ZIP\"");
+        given(assignmentService.createAssignment(eq(1L), any()))
+                .willThrow(new CustomException(ErrorCode.INVALID_RULE_COMBINATION));
+
+        mockMvc.perform(post("/api/assignments").header(HttpHeaders.AUTHORIZATION, bearerToken(1L))
+                        .contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_RULE_COMBINATION"))
+                .andExpect(jsonPath("$.error.message").value("파일 형식에 맞지 않는 검사 규칙이 있어요."));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "{\"title\":\" \",\"rules\":[{\"fileType\":\"PDF\",\"type\":\"PDF_REQUIRED_TEXT\",\"value\":\"참고문헌\"}]}",
