@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.workcheck.domain.assignment.dto.request.AssignmentRequest;
 import com.workcheck.domain.assignment.dto.request.CheckRuleRequest;
@@ -225,7 +227,7 @@ class AssignmentServiceImplTest {
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.ASSIGNMENT_NOT_FOUND);
 
-        verify(assignmentRepository, never()).saveAndFlush(any());
-        verify(assignmentRepository, never()).delete(any(Assignment.class));
+        verify(assignmentRepository, times(3)).findByIdWithRules(1L, 2L);
+        verifyNoMoreInteractions(assignmentRepository);
     }
 }

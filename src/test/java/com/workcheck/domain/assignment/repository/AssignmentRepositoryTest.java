@@ -1,6 +1,7 @@
 package com.workcheck.domain.assignment.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.workcheck.domain.assignment.entity.Assignment;
 import com.workcheck.domain.assignment.entity.CheckRule;
@@ -20,6 +21,9 @@ class AssignmentRepositoryTest {
 
     @Autowired
     private AssignmentRepository assignmentRepository;
+
+    @Autowired
+    private CheckRuleRepository checkRuleRepository;
 
     @Autowired
     private MemberRepository memberRepository;
@@ -84,13 +88,58 @@ class AssignmentRepositoryTest {
         Assignment assignment = Assignment.builder().title("개인 과제").member(owner).build();
         assignment.addRule(rule(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌"));
         assignmentRepository.saveAndFlush(assignment);
+        Assignment otherAssignment = Assignment.builder().title("개인 과제").member(other).build();
+        otherAssignment.addRule(rule(FileType.ZIP, RuleType.ZIP_REQUIRED_PATH, "data.sql"));
+        assignmentRepository.saveAndFlush(otherAssignment);
         entityManager.clear();
 
         assertThat(assignmentRepository.findAllWithRules(owner.getId()))
                 .extracting(Assignment::getId).containsExactly(assignment.getId());
-        assertThat(assignmentRepository.findAllWithRules(other.getId())).isEmpty();
+        assertThat(assignmentRepository.findAllWithRules(other.getId()))
+                .extracting(Assignment::getId).containsExactly(otherAssignment.getId());
         assertThat(assignmentRepository.findByIdWithRules(assignment.getId(), owner.getId())).isPresent();
         assertThat(assignmentRepository.findByIdWithRules(assignment.getId(), other.getId())).isEmpty();
     }
 
+    @Test
+    void delete_removesRulesAndKeepsOwner() {
+        Member member = memberRepository.findByEmail("demo@workcheck.com").orElseThrow();
+        Assignment assignment = Assignment.builder().title("삭제할 과제").member(member).build();
+        CheckRule rule = rule(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌");
+        assignment.addRule(rule);
+        assignmentRepository.saveAndFlush(assignment);
+        entityManager.clear();
+
+        Assignment managed = assignmentRepository.findByIdWithRules(assignment.getId(), member.getId()).orElseThrow();
+        assignmentRepository.delete(managed);
+        assignmentRepository.flush();
+        entityManager.clear();
+
+        assertThat(assignmentRepository.findById(assignment.getId())).isEmpty();
+        assertThat(checkRuleRepository.findById(rule.getId())).isEmpty();
+        assertThat(memberRepository.findById(member.getId())).isPresent();
+    }
+
+    @Test
+    void demoAssignments_loadPdfAndZipRulesForDemoMember() {
+        Member member = memberRepository.findByEmail("demo@workcheck.com").orElseThrow();
+        List<Assignment> assignments = assignmentRepository.findAllWithRules(member.getId());
+
+        assertThat(assignments).extracting(Assignment::getTitle)
+                .containsExactlyInAnyOrder("과학 탐구 보고서", "자바 프로젝트");
+        assertThat(assignments).allSatisfy(assignment ->
+                assertThat(assignment.getMember().getId()).isEqualTo(member.getId()));
+        assertThat(assignments).filteredOn(assignment -> assignment.getTitle().equals("과학 탐구 보고서"))
+                .singleElement().satisfies(assignment -> assertThat(assignment.getRules())
+                        .extracting(CheckRule::getFileType, CheckRule::getType, CheckRule::getValue)
+                        .containsExactlyInAnyOrder(
+                                tuple(FileType.PDF, RuleType.FILE_NAME_SUFFIX, "_보고서.pdf"),
+                                tuple(FileType.PDF, RuleType.PDF_REQUIRED_TEXT, "참고문헌")));
+        assertThat(assignments).filteredOn(assignment -> assignment.getTitle().equals("자바 프로젝트"))
+                .singleElement().satisfies(assignment -> assertThat(assignment.getRules())
+                        .extracting(CheckRule::getFileType, CheckRule::getType, CheckRule::getValue)
+                        .containsExactlyInAnyOrder(
+                                tuple(FileType.ZIP, RuleType.FILE_NAME_SUFFIX, "_프로젝트.zip"),
+                                tuple(FileType.ZIP, RuleType.ZIP_REQUIRED_PATH, "src/main/resources/data.sql")));
+    }
 }
