@@ -14,14 +14,31 @@ public interface CheckHistoryRepository extends JpaRepository<CheckHistory, Long
 
     List<CheckHistory> findByAssignment_IdAndStatusOrderByCreatedAtDescIdDesc(Long assignmentId, CheckStatus status);
 
-    @Query("select h from CheckHistory h join fetch h.assignment a where a.member.id = :memberId "
-            + "order by h.createdAt desc, h.id desc")
+    @Query("""
+        select h
+        from CheckHistory h
+        join fetch h.assignment a
+        where a.member.id = :memberId
+        order by h.createdAt desc, h.id desc
+    """)
     List<CheckHistory> findAllByMemberId(@Param("memberId") Long memberId);
 
-    @Query("select h from CheckHistory h join fetch h.assignment a where a.member.id = :memberId "
-            + "and h.status = :status order by h.createdAt desc, h.id desc")
+    @Query("""
+        select h
+        from CheckHistory h
+        join fetch h.assignment a
+        where a.member.id = :memberId
+        and h.status = :status
+        order by h.createdAt desc, h.id desc
+    """)
     List<CheckHistory> findAllByMemberIdAndStatus(@Param("memberId") Long memberId, @Param("status") CheckStatus status);
 
-    @Query("select h from CheckHistory h left join fetch h.results where h.id = :checkId and h.assignment.id = :assignmentId")
+    @Query("""
+        select h
+        from CheckHistory h
+        left join fetch h.results
+        where h.id = :checkId
+        and h.assignment.id = :assignmentId
+    """)
     Optional<CheckHistory> findByIdWithResults(@Param("checkId") Long checkId, @Param("assignmentId") Long assignmentId);
 }
