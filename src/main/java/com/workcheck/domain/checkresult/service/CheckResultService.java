@@ -5,5 +5,5 @@ import com.workcheck.domain.checkresult.dto.response.CheckResultResponse;
 
 public interface CheckResultService {
 
-    CheckResultResponse createCheckResult(CheckResultRequest request);
+    CheckResultResponse createCheckResult(Long memberId, CheckResultRequest request);
 }
