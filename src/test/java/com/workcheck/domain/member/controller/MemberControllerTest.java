@@ -97,7 +97,7 @@ class MemberControllerTest {
 
     @Test
     void signin_returns200() throws Exception {
-        given(memberService.signin(any())).willReturn(new SigninResponse("access-token"));
+        given(memberService.login(any())).willReturn(new SigninResponse("access-token"));
 
         mockMvc.perform(post("/api/member/login").contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -108,7 +108,7 @@ class MemberControllerTest {
 
     @Test
     void signin_wrongCredentials_returns401() throws Exception {
-        given(memberService.signin(any())).willThrow(new CustomException(ErrorCode.SIGNIN_FAILED));
+        given(memberService.login(any())).willThrow(new CustomException(ErrorCode.SIGNIN_FAILED));
 
         mockMvc.perform(post("/api/member/login").contentType(MediaType.APPLICATION_JSON)
                         .content("""

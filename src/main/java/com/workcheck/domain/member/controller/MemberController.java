@@ -35,11 +35,11 @@ public class MemberController {
         return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.success(memberService.signup(request)));
     }
 
-    @Operation(summary = "로그인", description = "accessToken을 발급해요. Swagger 오른쪽 위 Authorize에 넣으면 이후 요청에 자동으로 붙어요.")
+    @Operation(summary = "로그인")
     @SecurityRequirements
     @PostMapping("/login")
-    public ResponseEntity<BaseResponse<SigninResponse>> signin(@Valid @RequestBody SigninRequest request) {
-        return ResponseEntity.ok(BaseResponse.success(memberService.signin(request)));
+    public ResponseEntity<BaseResponse<SigninResponse>> login(@Valid @RequestBody SigninRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(memberService.login(request)));
     }
 
     @Operation(summary = "내 정보 조회")

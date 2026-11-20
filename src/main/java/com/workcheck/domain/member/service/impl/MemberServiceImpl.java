@@ -45,7 +45,7 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     @Transactional(readOnly = true)
-    public SigninResponse signin(SigninRequest request) {
+    public SigninResponse login(SigninRequest request) {
 
         Member member = memberRepository.findByEmail(normalizeEmail(request.email()))
                 .filter(found -> passwordEncoder.matches(request.password(), found.getPassword()))

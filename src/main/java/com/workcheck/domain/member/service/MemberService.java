@@ -9,7 +9,7 @@ public interface MemberService {
 
     MemberResponse signup(SignupRequest request);
 
-    SigninResponse signin(SigninRequest request);
+    SigninResponse login(SigninRequest request);
 
     MemberResponse getMember(Long memberId);
 }

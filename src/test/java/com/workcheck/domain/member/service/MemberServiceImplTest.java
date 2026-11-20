@@ -72,7 +72,7 @@ class MemberServiceImplTest {
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
         given(jwtProvider.createAccessToken(1L)).willReturn("access-token");
 
-        assertThat(memberService.signin(new SigninRequest("A@b.com", "password1")).accessToken())
+        assertThat(memberService.login(new SigninRequest("A@b.com", "password1")).accessToken())
                 .isEqualTo("access-token");
     }
 
@@ -82,7 +82,7 @@ class MemberServiceImplTest {
                 .password(passwordEncoder.encode("password1")).name("학생").build();
         given(memberRepository.findByEmail("a@b.com")).willReturn(Optional.of(member));
 
-        assertThatThrownBy(() -> memberService.signin(new SigninRequest("a@b.com", "wrong")))
+        assertThatThrownBy(() -> memberService.login(new SigninRequest("a@b.com", "wrong")))
                 .extracting("errorCode").isEqualTo(ErrorCode.SIGNIN_FAILED);
         verify(jwtProvider, never()).createAccessToken(any());
     }
@@ -91,7 +91,7 @@ class MemberServiceImplTest {
     void signin_unknownEmail_throwsSameError() {
         given(memberRepository.findByEmail("x@b.com")).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> memberService.signin(new SigninRequest("x@b.com", "password1")))
+        assertThatThrownBy(() -> memberService.login(new SigninRequest("x@b.com", "password1")))
                 .extracting("errorCode").isEqualTo(ErrorCode.SIGNIN_FAILED);
         verify(jwtProvider, never()).createAccessToken(any());
     }
