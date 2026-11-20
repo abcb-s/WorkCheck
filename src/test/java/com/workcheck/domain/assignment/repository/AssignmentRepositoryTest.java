@@ -102,6 +102,19 @@ class AssignmentRepositoryTest {
     }
 
     @Test
+    void existsByIdAndMember_checksOwner() {
+        Member owner = memberRepository.save(Member.builder().email("owner@workcheck.com")
+                .password("hash").name("소유자").build());
+        Member other = memberRepository.save(Member.builder().email("other@workcheck.com")
+                .password("hash").name("다른 회원").build());
+        Assignment assignment = assignmentRepository.saveAndFlush(
+                Assignment.builder().title("과제").member(owner).build());
+
+        assertThat(assignmentRepository.existsByIdAndMember_Id(assignment.getId(), owner.getId())).isTrue();
+        assertThat(assignmentRepository.existsByIdAndMember_Id(assignment.getId(), other.getId())).isFalse();
+    }
+
+    @Test
     void flush_assignsNewRuleIdAndRemovesReplacedRules() {
         Member member = memberRepository.findByEmail("demo@workcheck.com").orElseThrow();
         Assignment assignment = Assignment.builder().title("교체할 과제").member(member).build();

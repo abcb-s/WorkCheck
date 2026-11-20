@@ -14,4 +14,6 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
 
     @Query("select a from Assignment a left join fetch a.rules where a.id = :assignmentId and a.member.id = :memberId")
     Optional<Assignment> findByIdWithRules(@Param("assignmentId") Long assignmentId, @Param("memberId") Long memberId);
+
+    boolean existsByIdAndMember_Id(Long assignmentId, Long memberId);
 }

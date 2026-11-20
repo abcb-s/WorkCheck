@@ -1,5 +1,6 @@
 package com.workcheck.domain.assignment.entity;
 
+import com.workcheck.domain.check.entity.CheckHistory;
 import com.workcheck.global.data.BaseTimeEntity;
 import com.workcheck.domain.member.entity.Member;
 import jakarta.persistence.CascadeType;
@@ -46,6 +47,10 @@ public class Assignment extends BaseTimeEntity {
     @OrderBy("id ASC")
     @Builder.Default
     private List<CheckRule> rules = new ArrayList<>();
+
+    @OneToMany(mappedBy = "assignment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<CheckHistory> histories = new ArrayList<>();
 
     public void addRule(CheckRule rule) {
         rules.add(rule);
