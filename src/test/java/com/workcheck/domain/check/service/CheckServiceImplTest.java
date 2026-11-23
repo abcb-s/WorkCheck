@@ -125,6 +125,8 @@ class CheckServiceImplTest {
         assertThat(response.results()).extracting("status").containsExactly(CheckStatus.PASS, CheckStatus.FAIL);
         assertThat(response.results().get(1).message())
                 .isEqualTo("압축 파일에서 src/main/resources/data.sql 경로를 찾지 못했어요.");
+        assertThat(response.results().get(0).missingItems()).isEmpty();
+        assertThat(response.results().get(1).missingItems()).containsExactly("src/main/resources/data.sql");
 
         CheckHistory saved = savedHistory();
         assertThat(saved.getAssignment()).isSameAs(assignment);
@@ -168,7 +170,11 @@ class CheckServiceImplTest {
         givenSaveReturnsArgument();
         MockMultipartFile file = new MockMultipartFile("file", "report.pdf", "application/pdf", pdf("Introduction"));
 
-        assertThat(checkService.check(1L, 1L, file).status()).isEqualTo(CheckStatus.FAIL);
+        CheckResponse response = checkService.check(1L, 1L, file);
+
+        assertThat(response.status()).isEqualTo(CheckStatus.FAIL);
+        assertThat(response.results()).singleElement()
+                .satisfies(result -> assertThat(result.missingItems()).containsExactly("References"));
     }
 
     @Test
@@ -183,6 +189,7 @@ class CheckServiceImplTest {
 
         assertThat(response.status()).isEqualTo(CheckStatus.REVIEW);
         assertThat(response.results()).extracting("status").containsExactly(CheckStatus.PASS, CheckStatus.REVIEW);
+        assertThat(response.results()).allSatisfy(result -> assertThat(result.missingItems()).isEmpty());
     }
 
     @Test
