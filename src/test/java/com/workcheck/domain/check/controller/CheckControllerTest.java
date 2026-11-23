@@ -49,7 +49,7 @@ class CheckControllerTest {
             "project.zip",
             CheckStatus.FAIL,
             List.of(new CheckResultResponse(10L, RuleType.ZIP_REQUIRED_PATH, "data.sql", CheckStatus.FAIL,
-                    "압축 파일에서 data.sql 경로를 찾지 못했어요.")),
+                    "압축 파일에서 data.sql 경로를 찾지 못했어요.", List.of("data.sql"))),
             LocalDateTime.of(2026, 11, 19, 9, 0)
     );
 
@@ -69,6 +69,7 @@ class CheckControllerTest {
                 .andExpect(jsonPath("$.data.id").value(5))
                 .andExpect(jsonPath("$.data.status").value("FAIL"))
                 .andExpect(jsonPath("$.data.results[0].message").value("압축 파일에서 data.sql 경로를 찾지 못했어요."))
+                .andExpect(jsonPath("$.data.results[0].missingItems[0]").value("data.sql"))
                 .andExpect(jsonPath("$.error").doesNotExist());
     }
 
