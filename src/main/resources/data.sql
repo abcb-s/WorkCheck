@@ -49,3 +49,11 @@ VALUES ((SELECT check_history_id FROM check_history WHERE file_name = '김데모
        ((SELECT check_history_id FROM check_history WHERE file_name = '김데모_프로젝트.zip'),
         'ZIP_REQUIRED_PATH', 'src/main/resources/data.sql', 'FAIL', '압축 파일에서 src/main/resources/data.sql 경로를 찾지 못했어요.',
         DATEADD('MINUTE', -30, CURRENT_TIMESTAMP), DATEADD('MINUTE', -30, CURRENT_TIMESTAMP));
+
+INSERT INTO assignment (title, member_id, created_at, updated_at)
+VALUES ('데모 ZIP 과제', (SELECT member_id FROM member WHERE email = 'demo@workcheck.com'), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO check_rule (assignment_id, file_type, rule_type, rule_value, created_at, updated_at)
+VALUES ((SELECT assignment_id FROM assignment WHERE title = '데모 ZIP 과제'
+         AND member_id = (SELECT member_id FROM member WHERE email = 'demo@workcheck.com')),
+        'ZIP', 'FILE_NAME_SUFFIX', '.zip', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

@@ -166,7 +166,7 @@ class AssignmentRepositoryTest {
         List<Assignment> assignments = assignmentRepository.findAllWithRules(member.getId());
 
         assertThat(assignments).extracting(Assignment::getTitle)
-                .containsExactlyInAnyOrder("과학 탐구 보고서", "자바 프로젝트");
+                .containsExactlyInAnyOrder("과학 탐구 보고서", "자바 프로젝트", "데모 ZIP 과제");
         assertThat(assignments).allSatisfy(assignment ->
                 assertThat(assignment.getMember().getId()).isEqualTo(member.getId()));
         assertThat(assignments).filteredOn(assignment -> assignment.getTitle().equals("과학 탐구 보고서"))
